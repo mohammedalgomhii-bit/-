@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مساعد مبيعات اليمن الذكي</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .chat-container::-webkit-scrollbar { width: 4px; }
+        .chat-container::-webkit-scrollbar-thumb { background: #e4e4e7; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-zinc-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function SalesBot() {
+            const [messages, setMessages] = useState([
+                { role: 'bot', text: 'حياك الله في نظام تعاقدات التغذية للمؤسسات. يرجى تزويدنا برقم الهاتف أو اسم الكيان (شركة/مؤسسة/مستشفى) للبدء.' }
+            ]);
+            const [booking, setBooking] = useState({
+                name: "", phone: "", location: "", date: "", type: "", items: "", quantity: ""
+            });
+            const [currentStep, setCurrentStep] = useState("check_identity");
+            const [lastOrder, setLastOrder] = useState(null);
+            const [isLoading, setIsLoading] = useState(false);
+            const chatEndRef = useRef(null);
+
+            const SHEETDB_URL = "https://sheetdb.io/api/v1/8ku63b4j58gja";
+
+            useEffect(() => {
+                chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, [messages]);
+
+            const addMessage = (role, text) => {
+                setMessages(prev => [...prev, { role, text }]);
+            };
+
+            const isValidDate = (dateStr) => {
+                const reg = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+                if (!dateStr.match(reg)) return false;
+                const [_, d, m, y] = dateStr.match(reg);
+                const inputDate = new Date(y, m - 1, d);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return inputDate >= today;
+            };
+
+            const checkCustomer = async (val) => {
+                try {
+                    const res = await fetch(`${SHEETDB_URL}/search?phone=${val}`);
+                    const data = await res.json();
+                    return data.length > 0 ? data[data.length - 1] : null;
+                } catch (e) { return null; }
+            };
+
+            const handleSend = async (inputText) => {
+                if (!inputText.trim()) return;
+                addMessage('user', inputText);
+
+                // فحص الطلب الفردي
+                if (inputText.includes("وجبة واحدة") || inputText.match(/\b(1|واحد)\b/)) {
+                    addMessage('bot', "عذراً، نحن نخدم الشركات فقط. للطلبات الشخصية تفضل عبر تطبيق لبيه: https://play.google.com/store/apps/details?id=com.techsoft.daily_dish_app");
+                    return;
+                }
+
+                switch (currentStep) {
+                    case "check_identity":
+                        setIsLoading(true);
+                        const prev = await checkCustomer(inputText);
+                        setIsLoading(false);
+                        if (prev) {
+                            setLastOrder(prev);
+                            setCurrentStep("reorder_confirm");
+                            addMessage('bot', `أهلاً بك مجدداً يا ${prev.name}. وجدنا طلبك السابق لـ (${prev.location}). هل تريد تكرار نفس الطلب بنفس التفاصيل؟ (نعم / لا)`);
+                        } else {
+                            setCurrentStep("ask_name_phone");
+                            addMessage('bot', "أهلاً بك عميلاً جديداً. يرجى تزويدنا بالاسم الرباعي كاملاً أو اسم الكيان (شركة/مؤسسة/مستشفى/مدرسة) مع رقم التواصل.");
+                        }
+                        break;
+
+                    case "reorder_confirm":
+                        if (inputText.includes("نعم")) {
+                            setCurrentStep("update_date_only");
+                            addMessage('bot', "ممتاز! يرجى تحديد التاريخ الجديد للموعد (يوم/شهر/سنة)؟");
+                        } else {
+                            setCurrentStep("ask_name_phone");
+                            addMessage('bot', "حاضر، نبدأ من جديد. الاسم الرباعي أو اسم الجهة مع رقم الهاتف؟");
+                        }
+                        break;
+
+                    case "update_date_only":
+                        if (!isValidDate(inputText)) {
+                            addMessage('bot', "عفواً، التاريخ غير صحيح أو في الماضي. أعد كتابته بصيغة (يوم/شهر/سنة).");
+                        } else {
+                            const newOrder = { ...lastOrder, date: inputText, timestamp: new Date().toLocaleString() };
+                            delete newOrder.id;
+                            await fetch(SHEETDB_URL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({data: [newOrder]}) });
+                            addMessage('bot', `تم تحديث طلبك بنجاح للتاريخ ${inputText}. شكراً لثقتك بنا! ✅`);
+                            setCurrentStep("done");
+                        }
+                        break;
+
+                    case "ask_name_phone":
+                        const isCorp = /^(شركة|مؤسسة|مستشفى|مدرسة|مجمع|مركز)/.test(inputText);
+                        const hasPhone = /\d{7,}/.test(inputText);
+                        if (!hasPhone || (!isCorp && inputText.trim().split(" ").length < 4)) {
+                            addMessage('bot', "عذراً، يجب كتابة الاسم الرباعي كاملاً (أو جهة رسمية) مع رقم الهاتف بشكل صحيح.");
+                        } else {
+                            setBooking(p => ({ ...p, name: inputText, phone: inputText.match(/\d+/)[0] }));
+                            setCurrentStep("ask_location");
+                            addMessage('bot', "تمام. وين الموقع بالتفصيل؟ (المدينة - الشارع - العمارة/المعلم). مثال: المكلا - فوه - عمارة باجنيد.");
+                        }
+                        break;
+
+                    case "ask_location":
+                        if (inputText.split("-").length < 3) {
+                            addMessage('bot', "يرجى تسجيل الموقع بدقة (المدينة - الشارع - المبنى).");
+                        } else {
+                            setBooking(p => ({ ...p, location: inputText }));
+                            setCurrentStep("ask_date");
+                            addMessage('bot', "يرجى تحديد تاريخ بداية الخدمة (يوم/شهر/سنة).");
+                        }
+                        break;
+
+                    case "ask_date":
+                        if (!isValidDate(inputText)) {
+                            addMessage('bot', "التاريخ غير صحيح أو في الماضي. يرجى كتابة تاريخ قادم.");
+                        } else {
+                            setBooking(p => ({ ...p, date: inputText }));
+                            setCurrentStep("ask_type");
+                            addMessage('bot', "هل الطلب (خدمة تغذية للشركات) أم (استفسار معين)؟");
+                        }
+                        break;
+
+                    case "ask_type":
+                        if (inputText.includes("استفسار")) {
+                            setBooking(p => ({ ...p, type: "استفسار" }));
+                            setCurrentStep("final_step");
+                            addMessage('bot', "تفضل باكتب استفسارك بالكامل.");
+                        } else {
+                            setBooking(p => ({ ...p, type: "تغذية شركات" }));
+                            setCurrentStep("ask_template");
+                            addMessage('bot', "يرجى تعبئة القالب التالي:\nالوجبات:\nالمشروبات:\nالسلطات:\nالتحلية:\nاوقات التوصيل:\nالملاحظات:");
+                        }
+                        break;
+
+                    case "ask_template":
+                        const missing = !inputText.includes("المشروبات") || !inputText.includes("السلطات") || !inputText.includes("التحلية");
+                        if (missing) {
+                            setBooking(p => ({ ...p, items: inputText }));
+                            setCurrentStep("ask_why");
+                            addMessage('bot', "لماذا لا ترغب بإضافة المشروبات أو السلطات أو التحلية؟ (يمكنك الإضافة الآن أو ذكر السبب).");
+                        } else {
+                            setBooking(p => ({ ...p, items: inputText }));
+                            setCurrentStep("ask_qty");
+                            addMessage('bot', "كم عدد الوجبات اليومية المطلوبة؟");
+                        }
+                        break;
+
+                    case "ask_why":
+                        if (inputText.match(/(أريد|اضف|مشروب|سلطة|تحلية)/)) {
+                            setBooking(p => ({ ...p, items: p.items + " | إضافات: " + inputText }));
+                        }
+                        setCurrentStep("ask_qty");
+                        addMessage('bot', "تم التسجيل. كم عدد الوجبات اليومية المطلوبة؟");
+                        break;
+
+                    case "ask_qty":
+                    case "final_step":
+                        const final = { ...booking, quantity: inputText, timestamp: new Date().toLocaleString() };
+                        await fetch(SHEETDB_URL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({data: [final]}) });
+                        addMessage('bot', "شكراً جزيلاً! تم حفظ بياناتك بنجاح وسيتم التواصل معك من قبل فريق المبيعات قريباً. ✅");
+                        setCurrentStep("done");
+                        break;
+                }
+            };
+
+            return (
+                <div className="max-w-md mx-auto h-screen flex flex-col bg-white shadow-2xl">
+                    <header className="bg-zinc-900 p-5 text-white text-center rounded-b-3xl">
+                        <h1 className="text-lg font-bold">مساعد مبيعات المؤسسات</h1>
+                        <p className="text-xs text-zinc-400">خدمة عملاء اليمن - نظام ذكي</p>
+                    </header>
+
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 chat-container">
+                        {messages.map((m, i) => (
+                            <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                                <div className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-zinc-100 text-zinc-800' : 'bg-zinc-900 text-white shadow-lg'}`}>
+                                    {m.text.split('\n').map((line, j) => <p key={j}>{line}</p>)}
+                                </div>
+                            </div>
+                        ))}
+                        {isLoading && <div className="text-center text-xs text-zinc-400 animate-pulse">جاري التحقق...</div>}
+                        <div ref={chatEndRef} />
+                    </div>
+
+                    <div className="p-4 border-t bg-zinc-50">
+                        <div className="flex gap-2">
+                            <input 
+                                type="text" 
+                                placeholder="اكتب ردك هنا..."
+                                className="flex-1 p-3 rounded-xl border border-zinc-300 outline-none focus:border-zinc-900 transition-all"
+                                onKeyDown={(e) => {
+                                    if(e.key === 'Enter') {
+                                        handleSend(e.target.value);
+                                        e.target.value = "";
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SalesBot />);
+    </script>
+</body>
+</html>
