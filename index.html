@@ -10,54 +10,55 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* هوية الألوان: كريمي، ذهبي، وأسود كربوني دافئ */
+        /* تعريف الألوان الجديدة (أزرق هادئ وبرتقالي رملي ناعم) */
         :root {
-            --cream-white: #FCFBF9;
-            --soft-gold: #C5A059;
-            --carbon-black: #1A1A1A;
-            --soft-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+            --ocean-blue: #004D99;         /* أزرق بحري عميق وهادئ (أساسي) */
+            --soft-blue: #EBF5FF;         /* أزرق سماوي باهت جداً للخلفيات */
+            --sand-orange: #FF9933;       /* برتقالي رملي دافئ (ثانوي للتفاصيل) */
+            --off-white: #FCFBF9;        /* أبيض باهت مريح للعين */
+            --shadow-light: 0 10px 40px rgba(0, 0, 0, 0.03); /* ظل خافت جداً للعمق */
         }
 
         body { 
             font-family: 'Tajawal', sans-serif; 
-            background-color: #F4F1ED; /* خلفية كريمية دافئة مريحة */
+            background-color: var(--soft-blue); /* خلفية زرقاء باهتة ومريحة */
             height: 100vh;
             margin: 0;
         }
 
-        /* حاوية بتصميم ناعم وظلال خافتة */
+        /* الحاوية الرئيسية بظلال ناعمة وتدرج خفيف */
         .vip-container {
-            background: var(--cream-white);
+            background: linear-gradient(135deg, #FFFFFF 0%, #F5FAFF 100%);
             border-radius: 35px;
-            box-shadow: var(--soft-shadow);
-            border: 1px solid rgba(197, 160, 89, 0.1);
+            box-shadow: var(--shadow-light);
+            border: 1px solid rgba(0, 77, 153, 0.08); /* إطار أزرق شفاف */
             overflow: hidden;
         }
 
-        /* الهيدر: أسود كربوني مع تدرج ذهبي خفيف */
+        /* الهيدر: أزرق بحري بتدرج ناعم مع لمسة برتقالية */
         .vip-header {
-            background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
-            border-bottom: 2px solid var(--soft-gold);
+            background: linear-gradient(135deg, #004D99 0%, #0066CC 100%);
+            border-bottom: 2px solid var(--sand-orange); /* خط برتقالي دافئ */
         }
 
-        .gold-accent { color: var(--soft-gold); }
+        .orange-accent { color: var(--sand-orange); }
 
-        /* فقاعات المحادثة بظلال ناعمة */
+        /* فقاعات المحادثة بظلال وتدرجات خافتة */
         .bot-bubble {
             background: #FFFFFF;
-            border: 1px solid #EAEAEA;
+            border: 1px solid rgba(0, 77, 153, 0.05);
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
-            color: var(--carbon-black);
+            color: #1A1A1A; /* نص داكن هادئ للقراءة */
         }
 
         .user-bubble {
-            background: var(--carbon-black);
+            background: linear-gradient(135deg, #FF9933 0%, #FFB366 100%); /* برتقالي متدرج ناعم */
             color: #FFFFFF;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 6px 20px rgba(255, 153, 51, 0.15); /* ظل برتقالي خافت */
         }
 
         .chat-scroll::-webkit-scrollbar { width: 4px; }
-        .chat-scroll::-webkit-scrollbar-thumb { background: var(--soft-gold); border-radius: 10px; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: var(--ocean-blue); border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -66,10 +67,10 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        function CornicheApp() {
+        function CornicheBlueApp() {
             const [input, setInput] = useState("");
             const [messages, setMessages] = useState([
-                { role: 'bot', text: 'أهلاً بك في خدمة VIP لمطاعم الكورنيش. نحن هنا لخدمتكم بخصوصية تامة وأسلوب راقٍ.' }
+                { role: 'bot', text: 'مرحباً بكم في خدمة الرد الآلي الـ VIP لمطاعم الكورنيش. نتشرف بخدمتكم في أجواء بحرية هادئة.' }
             ]);
             const chatEndRef = useRef(null);
 
@@ -88,34 +89,34 @@
                 let reply = "نسعد بخدمتكم؛ تم استلام طلبكم وسيتم التعامل معه بأعلى مستويات الجودة.";
                 const lowText = text.toLowerCase();
 
-                if (lowText.includes("بكرة") || lowText.includes("غدا")) reply = "تمت الجدولة ليوم غدٍ كما طلبت، نعدكم بالدقة في الموعد.";
-                if (lowText.includes("وجبة واحدة")) reply = "بكل سرور، سنقوم بتنفيذ طلبك الفردي فوراً بلمستنا الخاصة.";
-                if (lowText.includes("ذوقكم") || lowText.includes("شي خفيف")) reply = "اختيار موفق؛ سأقوم باختيار الطبق المفضل لدى روادنا الـ VIP ليكون مفاجأة ذوقية لكم.";
+                if (lowText.includes("بكرة") || lowText.includes("غدا")) reply = "تمت الجدولة ليوم غدٍ كما طلبت، نعدكم بالدقة والتميّز في الموعد.";
+                if (lowText.includes("وجبة واحدة")) reply = "بكل سرور، سنقوم بتنفيذ طلبك الفردي فوراً بلمستنا البحرية الخاصة.";
+                if (lowText.includes("ذوقكم") || lowText.includes("شي خفيف")) reply = "اختيار موفق؛ سأقوم باختيار الطبق الأكثر تميزاً لدينا ليكون مفاجأة شهية لكم.";
                 if (lowText.includes("ما قصرتوا") || lowText.includes("شكرا")) reply = "هذا واجبنا وفخر لنا؛ ننتظر تشريفكم لنا دائماً.";
 
                 setTimeout(() => {
                     setMessages(prev => [...prev, { role: 'bot', text: reply }]);
-                }, 600);
+                }, 650);
             };
 
             return (
                 <div className="w-full max-w-2xl mx-auto h-screen flex flex-col p-6">
                     <div className="flex-1 vip-container flex flex-col">
                         
-                        {/* الهيدر المتوافق مع الهوية */}
-                        <header className="vip-header px-8 py-6 text-white flex justify-between items-center">
+                        {/* الهيدر المتوافق مع الهوية البحرية الجديدة */}
+                        <header className="vip-header px-8 py-6 text-white flex justify-between items-center relative overflow-hidden">
                             <div>
-                                <h1 className="text-xl font-bold tracking-wide">مطاعم الكورنيش <span className="gold-accent">VIP</span></h1>
-                                <p className="text-[10px] opacity-60">نظام الرد الذكي المحدث</p>
+                                <h1 className="text-xl font-bold tracking-wide">مطاعم الكورنيش <span className="orange-accent">VIP</span></h1>
+                                <p className="text-[10px] opacity-70">نظام الرد الذكي المحدث (بدون مدخلات صوتية)</p>
                             </div>
-                            <div className="text-2xl">✨</div>
+                            <div className="text-2xl text-[#EBF5FF] opacity-90">⚓</div>
                         </header>
 
                         {/* منطقة الحوار بظلال وتدرجات خافتة */}
-                        <div className="flex-1 overflow-y-auto p-8 space-y-6 chat-scroll bg-[#FAF9F6]">
+                        <div className="flex-1 overflow-y-auto p-8 space-y-6 chat-scroll bg-[#FAFDFE]">
                             {messages.map((m, i) => (
-                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] p-5 rounded-[24px] text-[15px] leading-relaxed ${
+                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                                    <div className={`max-w-[85%] p-5 rounded-[24px] text-[15px] leading-relaxed message-shadow ${
                                         m.role === 'user' ? 'user-bubble rounded-bl-none' : 'bot-bubble rounded-br-none'
                                     }`}>
                                         {m.text}
@@ -126,19 +127,19 @@
                         </div>
 
                         {/* الإدخال النصي حصراً بدون ميكروفون */}
-                        <div className="p-8 bg-white border-t border-gray-100">
+                        <div className="p-8 bg-white border-t border-gray-100 shadow-inner">
                             <div className="relative flex items-center gap-3">
                                 <input 
                                     type="text" 
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder="أدخل رسالتك هنا..."
-                                    className="flex-1 p-5 bg-[#FDFDFD] border border-gray-200 rounded-2xl outline-none focus:border-[#C5A059] transition-all shadow-sm"
+                                    placeholder="أدخل رسالتك هنا بوضوح..."
+                                    className="flex-1 p-5 bg-[#F9FBFC] border border-gray-200 rounded-2xl outline-none focus:border-[#004D99] transition-all shadow-sm"
                                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                                 />
                                 <button 
                                     onClick={handleSend}
-                                    className="p-5 bg-[#1A1A1A] text-[#C5A059] rounded-2xl hover:bg-black transition-colors shadow-lg"
+                                    className="p-5 bg-[#004D99] text-[#FFFFFF] rounded-2xl hover:bg-[#003D7A] transition-colors shadow-lg active:scale-95"
                                 >
                                     ➤
                                 </button>
@@ -151,7 +152,7 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<CornicheApp />);
+        root.render(<CornicheBlueApp />);
     </script>
 </body>
 </html>
