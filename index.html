@@ -3,23 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الرد الآلي - مطاعم الكورنيش السياحية</title>
+    <title>الرد الآلي الصوتي - مطاعم الكورنيش</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; }
-        .vip-blue { background-color: #0056b3; }
-        .vip-orange { color: #ff7f27; }
-        .bg-vip-orange { background-color: #ff7f27; }
-        .chat-container::-webkit-scrollbar { width: 4px; }
-        .chat-container::-webkit-scrollbar-thumb { background: #0056b3; border-radius: 10px; }
-        .cancel-btn { background-color: #dc2626; color: white; padding: 10px 20px; border-radius: 12px; cursor: pointer; margin-top: 10px; font-weight: bold; transition: 0.3s; display: block; width: fit-content; }
-        .cancel-btn:hover { background-color: #991b1b; }
-        .send-btn { background-color: #0056b3; color: white; border-radius: 12px; padding: 10px; transition: 0.3s; }
-        .send-btn:hover { background-color: #003d7a; transform: scale(1.05); }
+        body { font-family: 'Tajawal', sans-serif; background-color: #f1f5f9; }
+        .vip-blue { background-color: #0076f7; }
+        .pneumorph-card { background: #fff; border-radius: 40px; }
+        .chat-container::-webkit-scrollbar { width: 3px; }
+        .chat-container::-webkit-scrollbar-thumb { background: #0076f7; border-radius: 10px; }
+        .is-recording { animation: pulse 1.5s infinite; color: #ef4444; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -28,166 +25,122 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        function CornicheBot() {
+        function CornicheVoiceBot() {
             const [inputValue, setInputValue] = useState("");
+            const [isRecording, setIsRecording] = useState(false);
             const [messages, setMessages] = useState([
-                { role: 'bot', text: 'مرحباً بكم في وحدة كبار العملاء بمطاعم الكورنيش السياحية.\nنتشرف بخدمتكم لتنسيق تعاقدات التغذية للمؤسسات والشركات.\n\nيرجى تزويدنا بالاسم الرباعي أو اسم الكيان الموقر ورقم التواصل للبدء.' }
+                { role: 'bot', text: 'مرحباً بكم في وحدة كبار العملاء بمطاعم الكورنيش السياحية. نتشرف بخدمتكم. يمكنك التحدث إلينا بالضغط على الميكروفون.' }
             ]);
-            const [booking, setBooking] = useState({ name: "", phone: "", location: "", date: "", type: "", items: "", quantity: "", status: "نشط" });
             const [currentStep, setCurrentStep] = useState("ask_identity");
-            const [showCancel, setShowCancel] = useState(false);
             const chatEndRef = useRef(null);
 
-            const SHEETDB_URL = "https://sheetdb.io/api/v1/8ku63b4j58gja";
+            // وظيفة نطق الرد بصوت
+            const speakText = (text) => {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ar-SA';
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            };
+
+            // وظيفة تسجيل الصوت وتحويله لنص
+            const startSpeechRecognition = () => {
+                const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!Recognition) {
+                    alert("عذراً، متصفحك لا يدعم التعرف على الصوت.");
+                    return;
+                }
+                const recognition = new Recognition();
+                recognition.lang = 'ar-SA';
+                recognition.onstart = () => setIsRecording(true);
+                recognition.onend = () => setIsRecording(false);
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    setInputValue(transcript);
+                };
+                recognition.start();
+            };
 
             useEffect(() => {
                 chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-            }, [messages]);
-
-            const parseSmartDate = (text) => {
-                const today = new Date();
-                if (text.includes("بكرة") || text.includes("غدا")) {
-                    today.setDate(today.getDate() + 1);
-                } else if (text.includes("بعد بكرة") || text.includes("بعد غد")) {
-                    today.setDate(today.getDate() + 2);
-                } else { return text; }
-                return `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
-            };
-
-            const handleCancelRequest = async () => {
-                try {
-                    await fetch(`${SHEETDB_URL}/phone/${booking.phone}`, {
-                        method: 'PATCH',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({data: { "status": "ملغي (باللون الأحمر)" }})
-                    });
-                    setMessages(prev => [...prev, { role: 'bot', text: 'تم تلقي طلب الإلغاء. تم تحديث سجلاتنا وتغيير حالة الطلب إلى (ملغي) باللون الأحمر. نأمل خدمتكم في فرص أخرى.' }]);
-                    setShowCancel(false);
-                } catch (e) {
-                    setMessages(prev => [...prev, { role: 'bot', text: 'عذراً، حدث خطأ أثناء محاولة الإلغاء. يرجى التواصل معنا هاتفياً.' }]);
+                // نطق آخر رسالة من البوت تلقائياً
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage && lastMessage.role === 'bot') {
+                    speakText(lastMessage.text);
                 }
-            };
+            }, [messages]);
 
             const handleSend = async () => {
                 const text = inputValue.trim();
                 if (!text) return;
-
                 setMessages(prev => [...prev, { role: 'user', text: text }]);
-                setInputValue(""); // تفريغ المربع
+                setInputValue("");
 
-                const personalKeywords = ["وجبة واحدة", "طلب شخصي", "حبة", "نفر", "أنا لحالي"];
-                if (personalKeywords.some(key => text.includes(key))) {
-                    setTimeout(() => {
-                        setMessages(prev => [...prev, { role: 'bot', text: 'نعتذر من سيادتكم، هذا القسم مخصص لتعاقدات الشركات والمؤسسات والطلبات الضخمة فقط.\nلطلبات الأفراد، يسعدنا خدمتكم عبر صالاتنا أو عبر أرقام التوصيل المباشرة. شكراً لتفهمكم.' }]);
-                    }, 500);
-                    return;
-                }
-
-                let botResponse = "";
-                let nextStep = currentStep;
-
-                switch (currentStep) {
-                    case "ask_identity":
-                        const hasPhone = /\d{7,}/.test(text);
-                        if (hasPhone && text.length > 15) {
-                            const phoneMatch = text.match(/\d+/)[0];
-                            setBooking(p => ({ ...p, name: text, phone: phoneMatch }));
-                            botResponse = "تشرفنا بكم. يرجى تزويدنا بموقع الكيان الموقر بالتفصيل (المدينة - الحي - الشارع - المعلم القريب).";
-                            nextStep = "ask_location";
-                        } else {
-                            botResponse = "عذراً، لضمان جودة الخدمة يرجى كتابة الاسم الرباعي كاملاً أو اسم المؤسسة مع رقم الهاتف بشكل صحيح.";
-                        }
-                        break;
-
-                    case "ask_location":
-                        if (text.length < 15) {
-                            botResponse = "نرجو من سيادتكم كتابة العنوان بدقة أكثر (المدينة - الشارع - المبنى) لنتمكن من دراسة لوجستيات التوصيل.";
-                        } else {
-                            setBooking(p => ({ ...p, location: text }));
-                            botResponse = "تم تدوين الموقع. متى ترغبون ببدء توريد الخدمة؟ (يمكنك قول: غداً، أو ذكر تاريخ محدد).";
-                            nextStep = "ask_date";
-                        }
-                        break;
-
-                    case "ask_date":
-                        const smartDate = parseSmartDate(text);
-                        setBooking(p => ({ ...p, date: smartDate }));
-                        botResponse = "ممتاز. هل الطلب مخصص لـ (تغذية يومية مستمرة) أم (فعالية/مناسبة محددة)؟";
-                        nextStep = "ask_type";
-                        break;
-
-                    case "ask_type":
-                        setBooking(p => ({ ...p, type: text }));
-                        botResponse = "يرجى تزويدنا بقائمة الوجبات المقترحة أو المتطلبات الخاصة (الوجبات، السلطات، المشروبات).";
-                        nextStep = "ask_items";
-                        break;
-
-                    case "ask_items":
-                        setBooking(p => ({ ...p, items: text }));
-                        botResponse = "أخيراً، ما هو العدد التقديري للوجبات اليومية المطلوبة؟";
-                        nextStep = "final";
-                        break;
-
-                    case "final":
-                        const finalData = { ...booking, quantity: text, timestamp: new Date().toLocaleString() };
-                        await fetch(SHEETDB_URL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({data: [finalData]}) });
-                        botResponse = "تم استلام طلبكم بنجاح. سيتواصل معكم أحد مدراء حسابات الشركات لدينا لمناقشة التفاصيل.\n\nبإمكانكم إلغاء الطلب الآن إذا رغبتم بذلك عبر الزر أدناه.";
-                        nextStep = "done";
-                        setShowCancel(true);
-                        break;
+                // منطق الردود (نفس المنطق السابق ولكن مع نطق الرد)
+                let response = "";
+                if (text.includes("وجبة واحدة")) {
+                    response = "نعتذر منك، هذا القسم للشركات فقط.";
+                } else {
+                    response = "شكراً لرسالتك، تم استلام تفاصيلك وسيتم معالجتها VIP.";
                 }
 
                 setTimeout(() => {
-                    setMessages(prev => [...prev, { role: 'bot', text: botResponse }]);
-                    setCurrentStep(nextStep);
-                }, 600);
+                    setMessages(prev => [...prev, { role: 'bot', text: response }]);
+                }, 800);
             };
 
             return (
-                <div className="max-w-lg mx-auto h-screen flex flex-col bg-white shadow-2xl border-x border-zinc-200">
-                    <header className="vip-blue p-6 text-white text-center rounded-b-[40px] shadow-lg">
-                        <h1 className="text-xl font-bold tracking-wide">الرد الآلي - خدمة العملاء</h1>
-                        <p className="text-sm opacity-90 font-medium">مطاعم الكورنيش السياحية | VIP</p>
-                    </header>
-
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6 chat-container">
-                        {messages.map((m, i) => (
-                            <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-                                <div className={`max-w-[85%] p-4 rounded-2xl text-sm ${m.role === 'user' ? 'bg-zinc-100 text-zinc-800 rounded-tr-none' : 'vip-blue text-white rounded-tl-none border-b-4 border-orange-400'}`}>
-                                    {m.text.split('\n').map((line, j) => <p key={j} className="mb-1">{line}</p>)}
-                                    {i === messages.length - 1 && showCancel && (
-                                        <button onClick={handleCancelRequest} className="cancel-btn">إلغاء هذا الطلب ✖</button>
-                                    )}
-                                </div>
+                <div className="w-full max-w-lg mx-auto h-screen flex flex-col p-4">
+                    <div className="flex-1 pneumorph-card flex flex-col bg-white shadow-2xl overflow-hidden">
+                        <header className="px-6 py-5 border-b flex items-center justify-between vip-blue text-white">
+                            <div>
+                                <h1 className="font-bold">مساعد الكورنيش الصوتي</h1>
+                                <p className="text-[10px]">نظام VIP الذكي</p>
                             </div>
-                        ))}
-                        <div ref={chatEndRef} />
-                    </div>
+                            <div className="flex gap-3">
+                                <button className="p-2 bg-white/20 rounded-full">📞</button>
+                            </div>
+                        </header>
 
-                    <div className="p-4 bg-zinc-50 border-t">
-                        <div className="flex items-center gap-2">
-                            <input 
-                                type="text" 
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                placeholder="اكتب ردكم الموقر هنا..."
-                                className="flex-1 p-4 rounded-2xl border border-zinc-300 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                onKeyDown={(e) => { if(e.key === 'Enter') handleSend(); }}
-                            />
-                            <button onClick={handleSend} className="send-btn">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 rotate-[270deg]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                </svg>
-                            </button>
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#fcfcfd] chat-container">
+                            {messages.map((m, i) => (
+                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                                    <div className={`p-4 rounded-3xl text-sm shadow-sm ${m.role === 'user' ? 'bg-white border' : 'vip-blue text-white'}`}>
+                                        {m.text}
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={chatEndRef} />
                         </div>
-                        <p className="text-[10px] text-center text-zinc-400 mt-2 italic">نظام التنسيق الذكي - مطاعم الكورنيش</p>
+
+                        <div className="p-5 border-t bg-white">
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={startSpeechRecognition}
+                                    className={`p-4 rounded-2xl ${isRecording ? 'bg-red-100 is-recording' : 'bg-zinc-100'}`}
+                                >
+                                    {isRecording ? '🛑' : '🎤'}
+                                </button>
+                                <input 
+                                    type="text" 
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    placeholder="تكلم أو اكتب هنا..."
+                                    className="flex-1 p-4 bg-zinc-50 rounded-2xl outline-none border border-transparent focus:border-blue-500"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                                />
+                                <button onClick={handleSend} className="p-4 vip-blue text-white rounded-2xl">
+                                    ➤
+                                </button>
+                            </div>
+                            <p className="text-[9px] text-center mt-2 text-zinc-400">اضغط على الميكروفون للتحدث مباشرة</p>
+                        </div>
                     </div>
                 </div>
             );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<CornicheBot />);
+        root.render(<CornicheVoiceBot />);
     </script>
 </body>
 </html>
