@@ -3,27 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مطاعم الكورنيش السياحية - خدمة العملاء</title>
+    <title>الرد الآلي - مطاعم الكورنيش VIP</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --ocean-blue: #004D99;
-            --soft-blue: #F0F7FF;
-            --sand-orange: #FF9933;
-            --shadow-subtle: 0 10px 30px rgba(0, 0, 0, 0.04);
+        body { 
+            font-family: 'Tajawal', sans-serif; 
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         }
-        body { font-family: 'Tajawal', sans-serif; background-color: var(--soft-blue); height: 100vh; margin: 0; }
-        .vip-container { background: #FFFFFF; border-radius: 30px; box-shadow: var(--shadow-subtle); border: 1px solid rgba(0, 77, 153, 0.05); overflow: hidden; }
-        .vip-header { background: linear-gradient(135deg, #004D99 0%, #005BB8 100%); border-bottom: 3px solid var(--sand-orange); }
-        .orange-accent { color: var(--sand-orange); }
-        .bot-bubble { background: #F8FAFC; border: 1px solid #EDF2F7; color: #2D3748; }
-        .user-bubble { background: linear-gradient(135deg, #FF9933 0%, #FFB366 100%); color: #FFFFFF; box-shadow: 0 4px 15px rgba(255, 153, 51, 0.2); }
-        .chat-scroll::-webkit-scrollbar { width: 3px; }
-        .chat-scroll::-webkit-scrollbar-thumb { background: var(--sand-orange); border-radius: 10px; }
+        /* تدرج لوني أزرق وبرتقالي صريح */
+        .vip-gradient { 
+            background: linear-gradient(90deg, #0056b3 0%, #ff7f27 100%); 
+        }
+        /* ظلال عميقة للصناديق */
+        .premium-shadow {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1), inset 0 -2px 4px rgba(0,0,0,0.05);
+        }
+        .chat-container::-webkit-scrollbar { width: 4px; }
+        .chat-container::-webkit-scrollbar-thumb { background: #0056b3; border-radius: 10px; }
+        
+        .bot-bubble {
+            background: white;
+            border-right: 4px solid #ff7f27;
+            box-shadow: 2px 5px 15px rgba(0,0,0,0.08);
+        }
+        .user-bubble {
+            background: linear-gradient(135deg, #0056b3 0%, #003d7a 100%);
+            color: white;
+            box-shadow: -2px 5px 15px rgba(0,86,179,0.3);
+        }
     </style>
 </head>
 <body>
@@ -32,105 +43,141 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        function CornicheFullSystem() {
-            const [input, setInput] = useState("");
-            const [step, setStep] = useState("ask_name"); // خطوات المحادثة
-            const [userData, setUserData] = useState({ name: "", phone: "", request: "" });
+        function CornicheBot() {
+            const welcomeText = "مرحباً بكم في وحدة كبار العملاء بمطاعم الكورنيش السياحية. نتشرف بخدمتكم.";
+            
+            const [inputValue, setInputValue] = useState("");
             const [messages, setMessages] = useState([
-                { role: 'bot', text: 'مرحباً بكم في وحدة كبار العملاء بمطاعم الكورنيش السياحية. نتشرف بخدمتكم.' },
-                { role: 'bot', text: 'للبدء، نتشرف بمعرفة اسمك الكريم؟' }
+                { role: 'bot', text: welcomeText }
             ]);
+            const [booking, setBooking] = useState({ name: "", phone: "", location: "", date: "", type: "", items: "", quantity: "", status: "نشط" });
+            const [currentStep, setCurrentStep] = useState("ask_identity");
             const chatEndRef = useRef(null);
+
+            const SHEETDB_URL = "https://sheetdb.io/api/v1/8ku63b4j58gja";
 
             useEffect(() => {
                 chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
             }, [messages]);
 
-            const handleSend = () => {
-                const text = input.trim();
+            const handleSend = async () => {
+                const text = inputValue.trim();
                 if (!text) return;
 
                 setMessages(prev => [...prev, { role: 'user', text: text }]);
-                setInput("");
+                setInputValue("");
+
+                // 1. معالجة التحيات (إذا قال مرحبا أو السلام عليكم في أي وقت)
+                const greetings = ["مرحبا", "هلا", "السلام", "كيف الحال", "صباح", "مساء", "عساكم"];
+                if (greetings.some(g => text.includes(g)) && currentStep === "ask_identity") {
+                    setTimeout(() => {
+                        setMessages(prev => [...prev, { role: 'bot', text: welcomeText }]);
+                    }, 600);
+                    return;
+                }
+
+                // 2. الكلمات المرفوضة (طلبات الأفراد)
+                const personalKeywords = ["وجبة واحدة", "طلب شخصي", "حبة", "نفر", "أنا لحالي"];
+                if (personalKeywords.some(key => text.includes(key))) {
+                    setTimeout(() => {
+                        setMessages(prev => [...prev, { role: 'bot', text: 'نعتذر من سيادتكم، هذا القسم مخصص لتعاقدات الشركات والمؤسسات فقط.' }]);
+                    }, 500);
+                    return;
+                }
+
+                let botResponse = "";
+                let nextStep = currentStep;
+
+                switch (currentStep) {
+                    case "ask_identity":
+                        // البحث عن رقم يبدأ بـ 77, 78, 73
+                        const phoneMatch = text.match(/(77|78|73)\d{7,}/);
+                        
+                        if (phoneMatch) {
+                            setBooking(p => ({ ...p, name: text, phone: phoneMatch[0] }));
+                            botResponse = "تشرفنا بكم. يرجى تزويدنا بموقع الكيان الموقر بالتفصيل (المدينة - الحي - الشارع).";
+                            nextStep = "ask_location";
+                        } else {
+                            botResponse = "يرجى تزويدنا بالاسم مع رقم هاتف صحيح يبدأ بـ (77 أو 78 أو 73) لنتمكن من خدمتكم.";
+                        }
+                        break;
+
+                    case "ask_location":
+                        if (text.length < 10) {
+                            botResponse = "نرجو كتابة العنوان بدقة أكثر لنتمكن من دراسة لوجستيات التوصيل.";
+                        } else {
+                            setBooking(p => ({ ...p, location: text }));
+                            botResponse = "تم تدوين الموقع. متى ترغبون ببدء توريد الخدمة؟ (مثلاً: غداً، أو تاريخ محدد).";
+                            nextStep = "ask_date";
+                        }
+                        break;
+
+                    case "ask_date":
+                        setBooking(p => ({ ...p, date: text }));
+                        botResponse = "ممتاز. هل الطلب لـ (تغذية يومية مستمرة) أم (مناسبة محددة)؟";
+                        nextStep = "ask_type";
+                        break;
+
+                    case "ask_type":
+                        setBooking(p => ({ ...p, type: text }));
+                        botResponse = "يرجى تزويدنا بمتطلبات الوجبات المقترحة.";
+                        nextStep = "ask_items";
+                        break;
+
+                    case "ask_items":
+                        setBooking(p => ({ ...p, items: text }));
+                        botResponse = "ما هو العدد التقديري للوجبات المطلوبة؟";
+                        nextStep = "final";
+                        break;
+
+                    case "final":
+                        const finalData = { ...booking, quantity: text, timestamp: new Date().toLocaleString() };
+                        await fetch(SHEETDB_URL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({data: [finalData]}) });
+                        botResponse = "تم استلام طلبكم بنجاح. سيتواصل معكم مدير حسابات الشركات قريباً.";
+                        nextStep = "done";
+                        break;
+                }
 
                 setTimeout(() => {
-                    let response = "";
-                    
-                    if (step === "ask_name") {
-                        setUserData(prev => ({ ...prev, name: text }));
-                        response = `والنعم بك أستاذ ${text}. الآن، فضلاً زوّدنا برقم جوالك للتواصل؟`;
-                        setStep("ask_phone");
-                    } 
-                    else if (step === "ask_phone") {
-                        setUserData(prev => ({ ...prev, phone: text }));
-                        response = `شكراً لك. كيف يمكننا خدمتك اليوم؟ (تستطيع ذكر تفاصيل طلبك، أو قل "نفس دايم"، "على ذوقكم" .. إلخ)`;
-                        setStep("ask_request");
-                    } 
-                    else if (step === "ask_request") {
-                        setUserData(prev => ({ ...prev, request: text }));
-                        
-                        // معالجة الدلائل السياقية في الطلب
-                        const t = text.toLowerCase();
-                        if (t.includes("بكرة") || t.includes("غدا")) {
-                            response = "تم تثبيت الموعد ليوم غدٍ. نعدكم بالدقة والتميز.";
-                        } else if (t.includes("وجبة واحدة")) {
-                            response = "أهلاً بك؛ تم تبسيط الإجراءات لطلبك الفردي الآن.";
-                        } else if (t.includes("نفس") || t.includes("الماضية")) {
-                            response = "بكل سرور، سنقوم بتحضير طلبك المعتاد فوراً.";
-                        } else if (t.includes("ذوقكم") || t.includes("شي خفيف")) {
-                            response = "اختيار موفق؛ سأختار لك طبق 'توقيع الشيف' الفاخر.";
-                        } else if (t.includes("ما قصرتوا") || t.includes("شكرا")) {
-                            response = "هذا واجبنا وفخر لنا؛ ننتظر تشريفكم لنا دائماً.";
-                        } else {
-                            response = "تم استلام تفاصيل طلبكم. سيقوم فريق خدمة العملاء بالتنفيذ فوراً.";
-                        }
-                    }
-
-                    setMessages(prev => [...prev, { role: 'bot', text: response }]);
+                    setMessages(prev => [...prev, { role: 'bot', text: botResponse }]);
+                    setCurrentStep(nextStep);
                 }, 600);
             };
 
             return (
-                <div className="w-full max-w-2xl mx-auto h-screen flex flex-col p-4 md:p-8">
-                    <div className="flex-1 vip-container flex flex-col">
-                        
-                        <header className="vip-header px-8 py-7 text-white flex justify-between items-center">
-                            <div>
-                                <h1 className="text-lg font-bold leading-tight">مطاعم الكورنيش السياحية</h1>
-                                <p className="text-[11px] opacity-80 mt-1">نظام الرد الآلي لخدمة العملاء</p>
-                            </div>
-                            <div className="text-xl font-black italic tracking-tighter orange-accent bg-white/10 px-3 py-1 rounded-lg border border-white/10">
-                                VIP
-                            </div>
-                        </header>
+                <div className="max-w-md mx-auto h-screen flex flex-col premium-shadow bg-white overflow-hidden">
+                    {/* هيدر بتدرج لوني صريح وظل سفلي */}
+                    <header className="vip-gradient p-8 text-white text-center shadow-2xl relative z-10">
+                        <h1 className="text-2xl font-bold">وحدة كبار العملاء</h1>
+                        <p className="text-xs opacity-90 mt-1">مطاعم الكورنيش السياحية</p>
+                    </header>
 
-                        <div className="flex-1 overflow-y-auto p-8 space-y-6 chat-scroll bg-white">
-                            {messages.map((m, i) => (
-                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-                                    <div className={`max-w-[85%] p-5 rounded-[22px] text-[15px] shadow-sm leading-relaxed ${
-                                        m.role === 'user' ? 'user-bubble rounded-bl-none' : 'bot-bubble rounded-br-none'
-                                    }`}>
-                                        {m.text}
-                                    </div>
+                    <div className="flex-1 overflow-y-auto p-5 space-y-6 bg-[#f4f7f9] chat-container">
+                        {messages.map((m, i) => (
+                            <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                                <div className={`max-w-[85%] p-4 rounded-2xl text-sm ${m.role === 'user' ? 'user-bubble rounded-tl-none' : 'bot-bubble rounded-tr-none text-zinc-800'}`}>
+                                    {m.text.split('\n').map((line, j) => <p key={j} className="leading-relaxed">{line}</p>)}
                                 </div>
-                            ))}
-                            <div ref={chatEndRef} />
-                        </div>
-
-                        <div className="p-6 bg-gray-50/50 border-t border-gray-100">
-                            <div className="flex items-center gap-3">
-                                <input 
-                                    type="text" 
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    placeholder={step === "ask_name" ? "اكتب اسمك هنا..." : step === "ask_phone" ? "اكتب رقم الجوال..." : "اكتب طلبك هنا..."}
-                                    className="flex-1 p-4 bg-white border border-gray-200 rounded-2xl outline-none focus:border-[#004D99] transition-all shadow-sm"
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                                />
-                                <button onClick={handleSend} className="p-4 bg-[#004D99] text-white rounded-2xl hover:bg-[#003D7A] transition-all shadow-lg">
-                                    ➤
-                                </button>
                             </div>
+                        ))}
+                        <div ref={chatEndRef} />
+                    </div>
+
+                    <div className="p-5 bg-white border-t border-zinc-100 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
+                        <div className="flex items-center gap-3">
+                            <input 
+                                type="text" 
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                placeholder="اكتب هنا..."
+                                className="flex-1 p-4 rounded-xl border border-zinc-200 outline-none focus:border-[#0056b3] transition-all"
+                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                            />
+                            <button onClick={handleSend} className="vip-gradient text-white p-4 rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-transform">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -138,7 +185,7 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<CornicheFullSystem />);
+        root.render(<CornicheBot />);
     </script>
 </body>
 </html>
