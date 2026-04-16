@@ -1,19 +1,145 @@
-# ==========================================================
-# نظام الرد الآلي المتقدم - مطاعم الكورنيش السياحية
-# الإصدار النهائي: VIP Contextual Engine (No Voice - Soft UI)
-# ==========================================================
-
-class CornicheVIPEngine:
-    def __init__(self):
-        # 1. تعريف الهوية البصرية الجديدة (ظلال وتدرجات خافتة)
-        self.style = {
-            "bg": "linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%)", # تدرج مريح
-            "card_shadow": "0px 10px 40px rgba(0, 0, 0, 0.04)", # ظلال خافتة جداً
-            "accent": "#C5A059", # ذهبي مطفي
-            "font": "#1A1A1A",   # أسود فخم
-            "voice_enabled": False # تم الحذف نهائياً
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خدمة العملاء VIP - مطاعم الكورنيش</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* التدرج اللوني المريح للخلفية */
+        body { 
+            font-family: 'Tajawal', sans-serif; 
+            background: linear-gradient(135deg, #f8fafd 0%, #e2e8f0 100%);
+            height: 100vh;
         }
+        /* تدرج VIP الذهبي الهادئ */
+        .vip-gradient { background: linear-gradient(90deg, #1a1a1a 0%, #2d2d2d 100%); }
+        .accent-gold { color: #C5A059; }
         
-        # 2. ذاكرة النظام (لحل مغالطة الذاكرة القريبة)
-        self.memory = {
-            "last_interaction
+        /* الظلال الخافتة والعمق البصري */
+        .soft-card { 
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05); /* ظل خافت جداً */
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .message-shadow { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); }
+        .input-shadow { box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.02); }
+        
+        .chat-container::-webkit-scrollbar { width: 4px; }
+        .chat-container::-webkit-scrollbar-thumb { background: #C5A059; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function CornicheVIPBot() {
+            const [inputValue, setInputValue] = useState("");
+            const [messages, setMessages] = useState([
+                { role: 'bot', text: 'مرحباً بك في وحدة كبار العملاء بمطاعم الكورنيش السياحية. نتشرف بخدمتكم في مساحتكم الخاصة.' }
+            ]);
+            const chatEndRef = useRef(null);
+
+            useEffect(() => {
+                chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, [messages]);
+
+            const handleSend = () => {
+                const text = inputValue.trim();
+                if (!text) return;
+
+                setMessages(prev => [...prev, { role: 'user', text: text }]);
+                setInputValue("");
+
+                // تطبيق "منطق الدلائل السياقية" للرد الذكي
+                let response = "";
+                const t = text.toLowerCase();
+
+                if (t.includes("بكرة") || t.includes("غدا")) {
+                    response = "بكل تأكيد، تم تثبيت طلبكم ليوم غدٍ وتوجيهه لقسم التنفيذ المبكر.";
+                } else if (t.includes("وجبة واحدة")) {
+                    response = "أهلاً بك؛ تم تبسيط الإجراءات لطلبك الفردي الآن. كيف يمكننا خدمتك؟";
+                } else if (t.includes("على ذوقكم") || t.includes("شي خفيف")) {
+                    response = "اختيار موفق؛ سأرشح لك طبق 'نسمة الكورنيش' لهذا الوقت، نثق أنه سينال إعجابكم.";
+                } else if (t.includes("ما قصرتوا") || t.includes("مشكورين")) {
+                    response = "هذا واجبنا وفخر لنا. يومكم سعيد ومميز كما هي زيارتكم.";
+                } else if (t.includes("بسرعة") || t.includes("تأخرتوا")) {
+                    response = "نعتذر بشدة؛ تم رفع درجة الأولوية لطلبكم الآن ليكون في مقدمة قائمة التسليم.";
+                } else if (t.includes("نفس") || t.includes("المرة الماضية")) {
+                    response = "بكل سرور، سنقوم بتحضير طلبكم المعتاد بنفس الجودة التي تفضلونها.";
+                } else {
+                    response = "نسعى دائماً لتقديم تجربة تليق بمقامكم، تفضل بإملائنا طلبك وسنقوم بتنفيذه فوراً.";
+                }
+
+                setTimeout(() => {
+                    setMessages(prev => [...prev, { role: 'bot', text: response }]);
+                }, 700);
+            };
+
+            return (
+                <div className="w-full max-w-2xl mx-auto h-screen flex flex-col p-6">
+                    <div className="flex-1 soft-card flex flex-col overflow-hidden">
+                        {/* الهيدر بتصميم فخم وتدرج مريح */}
+                        <header className="px-8 py-6 border-b border-gray-100 flex items-center justify-between vip-gradient text-white">
+                            <div>
+                                <h1 className="text-xl font-bold tracking-tight">خدمة العملاء <span className="accent-gold">VIP</span></h1>
+                                <p className="text-[11px] opacity-70">مطاعم الكورنيش السياحية | التفاعل الذكي</p>
+                            </div>
+                            <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 shadow-inner">
+                                🍽️
+                            </div>
+                        </header>
+
+                        {/* منطقة المحادثة */}
+                        <div className="flex-1 overflow-y-auto p-8 space-y-6 chat-container">
+                            {messages.map((m, i) => (
+                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                                    <div className={`max-w-[80%] p-5 rounded-[22px] text-[15px] leading-relaxed message-shadow ${
+                                        m.role === 'user' 
+                                        ? 'bg-white border border-gray-100 text-gray-800 rounded-br-none' 
+                                        : 'vip-gradient text-white rounded-bl-none border border-gray-700'
+                                    }`}>
+                                        {m.text}
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={chatEndRef} />
+                        </div>
+
+                        {/* منطقة الإدخال (بدون تسجيل صوت) */}
+                        <div className="p-8 bg-white/50 border-t border-gray-100">
+                            <div className="relative flex items-center gap-4">
+                                <input 
+                                    type="text" 
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    placeholder="اكتب طلبك هنا بوضوح..."
+                                    className="flex-1 p-5 bg-white rounded-2xl outline-none border border-gray-200 focus:border-[#C5A059] transition-all input-shadow text-gray-700"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                                />
+                                <button 
+                                    onClick={handleSend} 
+                                    className="p-5 vip-gradient text-[#C5A059] rounded-2xl hover:scale-105 active:scale-95 transition-transform shadow-lg"
+                                >
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CornicheVIPBot />);
+    </script>
+</body>
+</html>
