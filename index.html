@@ -16,42 +16,12 @@
             --sand-orange: #FF9933;
             --shadow-subtle: 0 10px 30px rgba(0, 0, 0, 0.04);
         }
-
-        body { 
-            font-family: 'Tajawal', sans-serif; 
-            background-color: var(--soft-blue);
-            height: 100vh;
-            margin: 0;
-        }
-
-        .vip-container {
-            background: #FFFFFF;
-            border-radius: 30px;
-            box-shadow: var(--shadow-subtle);
-            border: 1px solid rgba(0, 77, 153, 0.05);
-            overflow: hidden;
-        }
-
-        .vip-header {
-            background: linear-gradient(135deg, #004D99 0%, #005BB8 100%);
-            border-bottom: 3px solid var(--sand-orange);
-        }
-
+        body { font-family: 'Tajawal', sans-serif; background-color: var(--soft-blue); height: 100vh; margin: 0; }
+        .vip-container { background: #FFFFFF; border-radius: 30px; box-shadow: var(--shadow-subtle); border: 1px solid rgba(0, 77, 153, 0.05); overflow: hidden; }
+        .vip-header { background: linear-gradient(135deg, #004D99 0%, #005BB8 100%); border-bottom: 3px solid var(--sand-orange); }
         .orange-accent { color: var(--sand-orange); }
-
-        .bot-bubble {
-            background: #F8FAFC;
-            border: 1px solid #EDF2F7;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.01);
-            color: #2D3748;
-        }
-
-        .user-bubble {
-            background: linear-gradient(135deg, #FF9933 0%, #FFB366 100%);
-            color: #FFFFFF;
-            box-shadow: 0 4px 15px rgba(255, 153, 51, 0.2);
-        }
-
+        .bot-bubble { background: #F8FAFC; border: 1px solid #EDF2F7; color: #2D3748; }
+        .user-bubble { background: linear-gradient(135deg, #FF9933 0%, #FFB366 100%); color: #FFFFFF; box-shadow: 0 4px 15px rgba(255, 153, 51, 0.2); }
         .chat-scroll::-webkit-scrollbar { width: 3px; }
         .chat-scroll::-webkit-scrollbar-thumb { background: var(--sand-orange); border-radius: 10px; }
     </style>
@@ -62,10 +32,13 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        function CornicheV2() {
+        function CornicheFullSystem() {
             const [input, setInput] = useState("");
+            const [step, setStep] = useState("ask_name"); // خطوات المحادثة
+            const [userData, setUserData] = useState({ name: "", phone: "", request: "" });
             const [messages, setMessages] = useState([
-                { role: 'bot', text: 'مرحباً بكم في وحدة كبار العملاء بمطاعم الكورنيش السياحية. نتشرف بخدمتكم.' }
+                { role: 'bot', text: 'مرحباً بكم في وحدة كبار العملاء بمطاعم الكورنيش السياحية. نتشرف بخدمتكم.' },
+                { role: 'bot', text: 'للبدء، نتشرف بمعرفة اسمك الكريم؟' }
             ]);
             const chatEndRef = useRef(null);
 
@@ -80,17 +53,40 @@
                 setMessages(prev => [...prev, { role: 'user', text: text }]);
                 setInput("");
 
-                // تحليل ذكي بناءً على الدلائل السياقية
-                let reply = "تم استلام طلبكم بنجاح، فريقنا يعمل الآن على خدمتكم بأفضل شكل.";
-                const t = text.toLowerCase();
-
-                if (t.includes("بكرة") || t.includes("غدا")) reply = "تم تثبيت الموعد ليوم غدٍ. نعدكم بالدقة والتميز في الموعد.";
-                if (t.includes("وجبة واحدة")) reply = "أهلاً بك؛ تم تبسيط الإجراءات لطلبك الفردي الآن.";
-                if (t.includes("على ذوقكم") || t.includes("شي خفيف")) reply = "اختيار موفق؛ سأختار لك طبق 'توقيع الشيف' الفاخر ليكون مفاجأة ذوقية مميزة.";
-                if (t.includes("ما قصرتوا") || t.includes("شكرا")) reply = "هذا واجبنا وفخر لنا؛ ننتظر تشريفكم لنا دائماً.";
-
                 setTimeout(() => {
-                    setMessages(prev => [...prev, { role: 'bot', text: reply }]);
+                    let response = "";
+                    
+                    if (step === "ask_name") {
+                        setUserData(prev => ({ ...prev, name: text }));
+                        response = `والنعم بك أستاذ ${text}. الآن، فضلاً زوّدنا برقم جوالك للتواصل؟`;
+                        setStep("ask_phone");
+                    } 
+                    else if (step === "ask_phone") {
+                        setUserData(prev => ({ ...prev, phone: text }));
+                        response = `شكراً لك. كيف يمكننا خدمتك اليوم؟ (تستطيع ذكر تفاصيل طلبك، أو قل "نفس دايم"، "على ذوقكم" .. إلخ)`;
+                        setStep("ask_request");
+                    } 
+                    else if (step === "ask_request") {
+                        setUserData(prev => ({ ...prev, request: text }));
+                        
+                        // معالجة الدلائل السياقية في الطلب
+                        const t = text.toLowerCase();
+                        if (t.includes("بكرة") || t.includes("غدا")) {
+                            response = "تم تثبيت الموعد ليوم غدٍ. نعدكم بالدقة والتميز.";
+                        } else if (t.includes("وجبة واحدة")) {
+                            response = "أهلاً بك؛ تم تبسيط الإجراءات لطلبك الفردي الآن.";
+                        } else if (t.includes("نفس") || t.includes("الماضية")) {
+                            response = "بكل سرور، سنقوم بتحضير طلبك المعتاد فوراً.";
+                        } else if (t.includes("ذوقكم") || t.includes("شي خفيف")) {
+                            response = "اختيار موفق؛ سأختار لك طبق 'توقيع الشيف' الفاخر.";
+                        } else if (t.includes("ما قصرتوا") || t.includes("شكرا")) {
+                            response = "هذا واجبنا وفخر لنا؛ ننتظر تشريفكم لنا دائماً.";
+                        } else {
+                            response = "تم استلام تفاصيل طلبكم. سيقوم فريق خدمة العملاء بالتنفيذ فوراً.";
+                        }
+                    }
+
+                    setMessages(prev => [...prev, { role: 'bot', text: response }]);
                 }, 600);
             };
 
@@ -98,7 +94,6 @@
                 <div className="w-full max-w-2xl mx-auto h-screen flex flex-col p-4 md:p-8">
                     <div className="flex-1 vip-container flex flex-col">
                         
-                        {/* الهيدر المحدث بالعناوين الجديدة */}
                         <header className="vip-header px-8 py-7 text-white flex justify-between items-center">
                             <div>
                                 <h1 className="text-lg font-bold leading-tight">مطاعم الكورنيش السياحية</h1>
@@ -109,11 +104,10 @@
                             </div>
                         </header>
 
-                        {/* منطقة المحادثة بظلال هادئة */}
                         <div className="flex-1 overflow-y-auto p-8 space-y-6 chat-scroll bg-white">
                             {messages.map((m, i) => (
                                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-                                    <div className={`max-w-[85%] p-5 rounded-[22px] text-[15px] leading-relaxed ${
+                                    <div className={`max-w-[85%] p-5 rounded-[22px] text-[15px] shadow-sm leading-relaxed ${
                                         m.role === 'user' ? 'user-bubble rounded-bl-none' : 'bot-bubble rounded-br-none'
                                     }`}>
                                         {m.text}
@@ -123,21 +117,17 @@
                             <div ref={chatEndRef} />
                         </div>
 
-                        {/* الإدخال النصي حصراً */}
                         <div className="p-6 bg-gray-50/50 border-t border-gray-100">
                             <div className="flex items-center gap-3">
                                 <input 
                                     type="text" 
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder="اكتب رسالتك هنا..."
+                                    placeholder={step === "ask_name" ? "اكتب اسمك هنا..." : step === "ask_phone" ? "اكتب رقم الجوال..." : "اكتب طلبك هنا..."}
                                     className="flex-1 p-4 bg-white border border-gray-200 rounded-2xl outline-none focus:border-[#004D99] transition-all shadow-sm"
                                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                                 />
-                                <button 
-                                    onClick={handleSend}
-                                    className="p-4 bg-[#004D99] text-white rounded-2xl hover:bg-[#003D7A] transition-all shadow-lg active:scale-95"
-                                >
+                                <button onClick={handleSend} className="p-4 bg-[#004D99] text-white rounded-2xl hover:bg-[#003D7A] transition-all shadow-lg">
                                     ➤
                                 </button>
                             </div>
@@ -148,7 +138,7 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<CornicheV2 />);
+        root.render(<CornicheFullSystem />);
     </script>
 </body>
 </html>
