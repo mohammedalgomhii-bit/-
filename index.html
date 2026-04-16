@@ -1,146 +1,20 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الرد الآلي الصوتي - مطاعم الكورنيش</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Tajawal', sans-serif; background-color: #f1f5f9; }
-        .vip-blue { background-color: #0076f7; }
-        .pneumorph-card { background: #fff; border-radius: 40px; }
-        .chat-container::-webkit-scrollbar { width: 3px; }
-        .chat-container::-webkit-scrollbar-thumb { background: #0076f7; border-radius: 10px; }
-        .is-recording { animation: pulse 1.5s infinite; color: #ef4444; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
+# ==========================================================
+# نظام الرد الآلي المتقدم - مطاعم الكورنيش السياحية (إصدار VIP)
+# التحديث الأخير: معالجة سياقية شاملة + واجهة بصرية ناعمة
+# ==========================================================
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+import datetime
 
-        function CornicheVoiceBot() {
-            const [inputValue, setInputValue] = useState("");
-            const [isRecording, setIsRecording] = useState(false);
-            const [messages, setMessages] = useState([
-                { role: 'bot', text: 'مرحباً بكم في وحدة كبار العملاء بمطاعم الكورنيش السياحية. نتشرف بخدمتكم. يمكنك التحدث إلينا بالضغط على الميكروفون.' }
-            ]);
-            const [currentStep, setCurrentStep] = useState("ask_identity");
-            const chatEndRef = useRef(null);
-
-            // وظيفة نطق الرد بصوت
-            const speakText = (text) => {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'ar-SA';
-                utterance.rate = 0.9;
-                window.speechSynthesis.speak(utterance);
-            };
-
-            // وظيفة تسجيل الصوت وتحويله لنص
-            const startSpeechRecognition = () => {
-                const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!Recognition) {
-                    alert("عذراً، متصفحك لا يدعم التعرف على الصوت.");
-                    return;
-                }
-                const recognition = new Recognition();
-                recognition.lang = 'ar-SA';
-                recognition.onstart = () => setIsRecording(true);
-                recognition.onend = () => setIsRecording(false);
-                recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    setInputValue(transcript);
-                };
-                recognition.start();
-            };
-
-            useEffect(() => {
-                chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-                // نطق آخر رسالة من البوت تلقائياً
-                const lastMessage = messages[messages.length - 1];
-                if (lastMessage && lastMessage.role === 'bot') {
-                    speakText(lastMessage.text);
-                }
-            }, [messages]);
-
-            const handleSend = async () => {
-                const text = inputValue.trim();
-                if (!text) return;
-                setMessages(prev => [...prev, { role: 'user', text: text }]);
-                setInputValue("");
-
-                // منطق الردود (نفس المنطق السابق ولكن مع نطق الرد)
-                let response = "";
-                if (text.includes("وجبة واحدة")) {
-                    response = "نعتذر منك، هذا القسم للشركات فقط.";
-                } else {
-                    response = "شكراً لرسالتك، تم استلام تفاصيلك وسيتم معالجتها VIP.";
-                }
-
-                setTimeout(() => {
-                    setMessages(prev => [...prev, { role: 'bot', text: response }]);
-                }, 800);
-            };
-
-            return (
-                <div className="w-full max-w-lg mx-auto h-screen flex flex-col p-4">
-                    <div className="flex-1 pneumorph-card flex flex-col bg-white shadow-2xl overflow-hidden">
-                        <header className="px-6 py-5 border-b flex items-center justify-between vip-blue text-white">
-                            <div>
-                                <h1 className="font-bold">مساعد الكورنيش الصوتي</h1>
-                                <p className="text-[10px]">نظام VIP الذكي</p>
-                            </div>
-                            <div className="flex gap-3">
-                                <button className="p-2 bg-white/20 rounded-full">📞</button>
-                            </div>
-                        </header>
-
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#fcfcfd] chat-container">
-                            {messages.map((m, i) => (
-                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-                                    <div className={`p-4 rounded-3xl text-sm shadow-sm ${m.role === 'user' ? 'bg-white border' : 'vip-blue text-white'}`}>
-                                        {m.text}
-                                    </div>
-                                </div>
-                            ))}
-                            <div ref={chatEndRef} />
-                        </div>
-
-                        <div className="p-5 border-t bg-white">
-                            <div className="flex items-center gap-3">
-                                <button 
-                                    onClick={startSpeechRecognition}
-                                    className={`p-4 rounded-2xl ${isRecording ? 'bg-red-100 is-recording' : 'bg-zinc-100'}`}
-                                >
-                                    {isRecording ? '🛑' : '🎤'}
-                                </button>
-                                <input 
-                                    type="text" 
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    placeholder="تكلم أو اكتب هنا..."
-                                    className="flex-1 p-4 bg-zinc-50 rounded-2xl outline-none border border-transparent focus:border-blue-500"
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                                />
-                                <button onClick={handleSend} className="p-4 vip-blue text-white rounded-2xl">
-                                    ➤
-                                </button>
-                            </div>
-                            <p className="text-[9px] text-center mt-2 text-zinc-400">اضغط على الميكروفون للتحدث مباشرة</p>
-                        </div>
-                    </div>
-                </div>
-            );
+class CornicheRestaurantsVIP:
+    def __init__(self):
+        # الهوية البصرية (تُستخدم في بناء الواجهة الرسومية لاحقاً)
+        self.ui_styles = {
+            "background": "linear-gradient(135deg, #FFFFFF, #F2F2F2)",
+            "primary_color": "#1A1A1A",  # أسود فخم
+            "accent_color": "#C5A059",   # ذهبي ملكي
+            "soft_shadow": "0 8px 24px rgba(0, 0, 0, 0.06)",
+            "voice_module": None         # تم الإلغاء نهائياً
         }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<CornicheVoiceBot />);
-    </script>
-</body>
-</html>
+        
+        # بيانات افتراضية للذاكرة السياقية
+        self.context_memory = {
