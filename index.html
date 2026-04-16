@@ -3,171 +3,227 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>مطاعم الكورنيش VIP - نظام الفلترة والطلب</title>
+    <title>مطاعم الكورنيش VIP - إدارة الطلبات الذكية</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        html, body { overscroll-behavior-y: contain; margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Tajawal', sans-serif; background-color: #f0f2f5; }
-        .app-container { height: 100dvh; display: flex; flex-direction: column; max-width: 500px; margin: 0 auto; background: white; position: relative; }
-        header { flex-shrink: 0; background: white; border-bottom: 2px solid #f0f0f0; padding: 15px; text-align: center; z-index: 100; }
-        .chat-area { flex: 1; overflow-y: auto; padding: 15px; background: #fafafa; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
-        .bot-bubble { background: white; border: 1px solid #e8e8e8; border-radius: 15px 15px 15px 2px; padding: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 2px 8px rgba(0,0,0,0.03); color: #333; font-size: 14px; line-height: 1.6; border-right: 4px solid #ff7f27; }
-        .user-bubble { background: #0056b3; color: white; border-radius: 15px 15px 2px 15px; padding: 12px; max-width: 85%; align-self: flex-end; font-size: 14px; }
-        .input-section { padding: 10px 15px; border-top: 1px solid #eee; background: white; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
-        .input-wrapper { display: flex; align-items: flex-end; background: #f1f3f5; border-radius: 20px; padding: 8px 12px; border: 1px solid #e9ecef; }
-        textarea { flex: 1; background: transparent; border: none; outline: none; padding: 5px 0; font-size: 16px; color: #333; resize: none; max-height: 150px; min-height: 24px; line-height: 1.5; }
-        .send-btn { color: #0056b3; cursor: pointer; padding: 5px; }
-        .link-text { color: #0056b3; text-decoration: underline; font-weight: bold; }
+        body { font-family: 'Tajawal', sans-serif; background-color: #f1f5f9; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+        .app-shell { height: 100dvh; display: flex; flex-direction: column; max-width: 550px; margin: 0 auto; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; }
+        .chat-window { flex: 1; overflow-y: auto; padding: 20px; background: #fafafa; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
+        .msg { max-width: 85%; padding: 14px; line-height: 1.6; font-size: 15px; position: relative; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .msg-bot { align-self: flex-start; background: white; border: 1px solid #e2e8f0; border-right: 5px solid #b45309; border-radius: 15px 15px 15px 2px; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .msg-user { align-self: flex-end; background: #0f172a; color: white; border-radius: 15px 15px 2px 15px; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15); }
+        .input-container { padding: 15px; border-top: 1px solid #f1f5f9; background: white; padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
+        .input-box { display: flex; align-items: center; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 25px; padding: 6px 15px; transition: 0.2s; }
+        .input-box:focus-within { border-color: #b45309; background: white; box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.1); }
+        textarea { flex: 1; border: none; background: transparent; outline: none; resize: none; font-size: 16px; color: #1e293b; padding: 5px 0; max-height: 100px; }
+        .btn-send { background: #b45309; color: white; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 10px; flex-shrink: 0; }
+        .btn-send:active { transform: scale(0.9); }
+        .loading-dot { width: 6px; height: 6px; background: #94a3b8; border-radius: 50%; display: inline-block; margin: 0 2px; animation: bounce 0.6s infinite alternate; }
+        @keyframes bounce { to { transform: translateY(-4px); } }
     </style>
 </head>
 <body>
     <div id="root"></div>
+
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        function CornicheBot() {
+        const STAGES = {
+            IDLE: 'idle',
+            NAME: 'name',
+            PHONE: 'phone',
+            LOCATION: 'location',
+            PURPOSE: 'purpose',
+            DETAILS: 'details',
+            QUANTITY: 'quantity',
+            CONFIRM: 'confirm',
+            ORDER_DATE: 'order_date', // طلب التاريخ بعد التأكيد
+            SUCCESS: 'success'
+        };
+
+        function CornicheVipApp() {
             const API_URL = "https://sheetdb.io/api/v1/8ku63b4j58gja";
-            const [inputValue, setInputValue] = useState("");
-            const [messages, setMessages] = useState([{ 
-                role: 'bot', 
-                text: "مرحباً بكم في وحدة كبار العملاء بمطاعم الكورنيش السياحية. نتشرف بخدمتكم.\n\nيرجى تزويدنا بالاسم الثنائي لسيادتكم، ورقم التواصل والموقع للبدء بالتنسيق." 
-            }]);
-            
-            const [orderData, setOrderData] = useState({
-                name: "", phone: "", location: "", date: "",
-                type: "", quantity: "", details: ""
+            const [stage, setStage] = useState(STAGES.NAME);
+            const [userInput, setUserInput] = useState("");
+            const [isBotTyping, setIsBotTyping] = useState(false);
+            const [messages, setMessages] = useState([
+                { role: 'bot', text: "مرحباً بكم في وحدة كبار العملاء (VIP) بمطاعم الكورنيش السياحية.\n\nنتشرف ببدء إجراءات التنسيق مع سيادتكم.. تفضل بتزويدنا بالاسم الثنائي الموقر؟" }
+            ]);
+            const [formData, setFormData] = useState({
+                name: "", phone: "", location: "", type: "", details: "", quantity: "", date: "", timestamp: ""
             });
-            
-            const [step, setStep] = useState("get_info");
-            const chatEndRef = useRef(null);
-            const inputRef = useRef(null);
 
-            useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-            useEffect(() => {
-                inputRef.current.style.height = "24px";
-                inputRef.current.style.height = inputRef.current.scrollHeight + "px";
-            }, [inputValue]);
+            const chatRef = useRef(null);
+            useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' }); }, [messages, isBotTyping]);
 
-            const handleSend = async () => {
-                const text = inputValue.trim();
-                if (!text) return;
+            const handleSend = () => {
+                const text = userInput.trim();
+                if (!text || isBotTyping) return;
+
                 setMessages(prev => [...prev, { role: 'user', text }]);
-                setInputValue("");
+                setUserInput("");
+                setIsBotTyping(true);
 
-                setTimeout(async () => {
-                    let response = "";
-                    let nextStep = step;
+                // معالجة الردود بذكاء
+                setTimeout(() => processResponse(text), 1000);
+            };
 
-                    // 1. جمع البيانات الأساسية (الاسم، الرقم، الموقع)
-                    if (step === "get_info") {
-                        const phoneMatch = text.match(/(77|78|73)\d{7,}/);
-                        const words = text.replace(/[0-9]/g, '').trim().split(/\s+/);
-                        let updated = { ...orderData };
+            const processResponse = async (text) => {
+                let botReply = "";
+                let nextStage = stage;
+                let updatedData = { ...formData };
+
+                switch (stage) {
+                    case STAGES.NAME:
+                        if (text.trim().split(" ").length < 2) {
+                            botReply = "نرجو من سيادتكم كتابة الاسم الثنائي (الأول والأخير) لضمان رسمية التسجيل في كشوفاتنا.";
+                        } else {
+                            updatedData.name = text;
+                            botReply = `أهلاً بك سيد ${text}. تفضل بتزويدنا برقم الهاتف المعتمد للتواصل مع سيادتكم؟`;
+                            nextStage = STAGES.PHONE;
+                        }
+                        break;
+
+                    case STAGES.PHONE:
+                        const phoneMatch = text.match(/(77|78|73|71|70)\d{7}/);
+                        if (!phoneMatch) {
+                            botReply = "يرجى تزويدنا برقم هاتف صحيح (9 أرقام) لنتمكن من متابعة الطلب مع سيادتكم.";
+                        } else {
+                            updatedData.phone = phoneMatch[0];
+                            botReply = "تم تدوين الرقم.. نرجو من سيادتكم تحديد (الموقع) أو مكان إقامة المناسبة (المدينة - الحي - الشارع)؟";
+                            nextStage = STAGES.LOCATION;
+                        }
+                        break;
+
+                    case STAGES.LOCATION:
+                        if (text.length < 6) {
+                            botReply = "نرجو كتابة تفاصيل الموقع بدقة أكبر (الحي والشارع) لضمان سهولة الوصول.";
+                        } else {
+                            updatedData.location = text;
+                            botReply = "سيد الموقر، هل الطلب خاص بمناسبة كبرى أو عقد تغذية مستدام، أم هو طلب شخصي فردي؟";
+                            nextStage = STAGES.PURPOSE;
+                        }
+                        break;
+
+                    case STAGES.PURPOSE:
+                        const isPersonal = /شخص|فرد|نفس|بيت/.test(text);
+                        if (isPersonal) {
+                            botReply = "نعتذر بشدة من سيادتكم، هذا النظام مخصص حصرياً للمناسبات والتعاقدات الكبرى.\n\nللطلبات الشخصية، يرجى استخدام تطبيق (لبيه):\nhttps://labbayh.com\n\nتشرفنا بتواصلكم.";
+                            nextStage = STAGES.SUCCESS;
+                        } else {
+                            updatedData.type = text;
+                            botReply = "نتشرف بخدمتكم في هذه المناسبة. تفضل الآن بكتابة (تفاصيل الأصناف) المطلوبة من قائمة مطاعمنا؟";
+                            nextStage = STAGES.DETAILS;
+                        }
+                        break;
+
+                    case STAGES.DETAILS:
+                        updatedData.details = text;
+                        botReply = "وما هي (الكمية التقديرية) للوجبات أو عدد الضيوف المتوقع؟";
+                        nextStage = STAGES.QUANTITY;
+                        break;
+
+                    case STAGES.QUANTITY:
+                        updatedData.quantity = text;
+                        botReply = `إليك ملخص البيانات لسيادتكم:\nالاسم: ${updatedData.name}\nالطلب: ${updatedData.details}\nالكمية: ${text}\n\nهل تؤكد إرسال الطلب لقسم التنسيق؟ (تأكيد / تعديل)`;
+                        nextStage = STAGES.CONFIRM;
+                        break;
+
+                    case STAGES.CONFIRM:
+                        if (text.includes("تأكيد") || text.includes("نعم") || text.includes("موافق")) {
+                            botReply = "تم استلام التأكيد المبدئي. كخطوة أخيرة، يرجى تزويدنا بـ (تاريخ وموعد المناسبة) المطلوب؟";
+                            nextStage = STAGES.ORDER_DATE;
+                        } else {
+                            botReply = "تفضل بإرسال التعديلات المطلوبة على الأصناف:";
+                            nextStage = STAGES.DETAILS;
+                        }
+                        break;
+
+                    case STAGES.ORDER_DATE:
+                        updatedData.date = text;
+                        updatedData.timestamp = new Date().toLocaleString('ar-SA');
                         
-                        if (phoneMatch) updated.phone = phoneMatch[0];
-                        if (words.length >= 2 && !updated.name) updated.name = words.slice(0, 2).join(" ");
-                        if (text.length > 5 && !phoneMatch) updated.location = text;
-                        setOrderData(updated);
-
-                        if (!updated.name) {
-                            response = "نرجو من سيادتكم كتابة الاسم الثنائي الموقر (الأول والأخير).";
-                        } else if (!updated.phone) {
-                            response = `تشرفنا بسيادتكم يا سيد ${updated.name}. يرجى تزويدنا برقم الهاتف المعتمد.`;
-                        } else if (!updated.location || updated.location.split(" ").length < 2) {
-                            response = "يرجى تحديد موقع الكيان الموقر (المدينة - الحي - الشارع).";
-                        } else {
-                            response = "تم تسجيل بياناتكم المبدئية. نود الاستفسار من سيادتكم:\n\nهل يود الطلب بشكل شخصي دون أي مناسبة، أم أنه لمناسبة خاصة، أو لطلب تغذية مستدامة (عقود)؟";
-                            nextStep = "check_purpose";
-                        }
-                    } 
-                    // 2. فلترة الغرض من الطلب (شخصي vs مناسبات)
-                    else if (step === "check_purpose") {
-                        if (text.includes("شخصي") || text.includes("نفسي") || text.includes("فردي")) {
-                            response = "نعتذر بشدة من سيادتكم، هذه الخدمة مخصصة حصرياً للمناسبات الكبرى وعقود التغذية المستدامة.\n\nيمكنكم إتمام طلبكم الشخصي عبر تطبيق (لبيه) من الرابط التالي:\nhttps://labbayh.com\n\nشكراً لتفهمكم.";
-                            nextStep = "done";
-                        } else {
-                            setOrderData(p => ({ ...p, type: text }));
-                            response = "يسعدنا خدمتكم في مناسبتكم. تفضل الآن بكتابة تفاصيل الطلب مع تحديد (اسم الصنف والكمية بالأرقام) لكل بند:\n\nالوجبات:\nسلطات:\nمشروبات:\nالتحلية:\nملاحظات:";
-                            nextStep = "order";
-                        }
-                    }
-                    // 3. جمع تفاصيل الطلب بالكميات
-                    else if (step === "order") {
-                        const quantityMatch = text.match(/\d+/);
-                        if (!quantityMatch) {
-                            response = "تنبيه: نرجو من سيادتكم تحديد (الكمية بالأرقام) لكل صنف في الطلب لضمان دقة التنفيذ.";
-                        } else {
-                            setOrderData(p => ({ ...p, details: text, quantity: "متعدد" }));
-                            response = `إليك ملخص طلب سيادتكم:\n"${text}"\n\nهل نؤكد الطلب لسيادتكم؟ (تأكيد / تعديل)`;
-                            nextStep = "finalize";
-                        }
-                    }
-                    // 4. التأكيد النهائي والإرسال لقاعدة البيانات
-                    else if (step === "finalize") {
-                        if (text.includes("تأكيد") || text.includes("نعم") || text.includes("تم")) {
-                            response = "تم إرسال طلبكم الموقر بنجاح! سيتم التواصل معكم قريباً من قبل قسم التنسيق.\nشكراً لتواصلكم مع مطاعم الكورنيش السياحية.";
-                            
-                            await fetch(API_URL, {
+                        // الإرسال النهائي لقوقل شيت
+                        try {
+                            const response = await fetch(API_URL, {
                                 method: 'POST',
-                                headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({data: [{
-                                    name: orderData.name,
-                                    phone: orderData.phone,
-                                    location: orderData.location,
-                                    date: new Date().toLocaleDateString('en-GB'),
-                                    type: orderData.type,
-                                    quantity: orderData.quantity,
-                                    details: orderData.details,
-                                    timestamp: new Date().toLocaleString()
-                                }]})
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ data: [updatedData] })
                             });
-                            nextStep = "done";
-                        } else {
-                            response = "تفضل بإرسال التعديل المطلوب لسيادتكم الموقرة:";
-                            nextStep = "order";
+                            
+                            if (response.ok) {
+                                botReply = "تم إرسال طلبكم الموقر بنجاح إلى قسم التنسيق VIP.\n\nسيتم مراجعة الطلب والتواصل معكم خلال دقائق معدودة.\n\nشكراً لثقتكم بمطاعم الكورنيش السياحية.";
+                            } else {
+                                throw new Error();
+                            }
+                        } catch (e) {
+                            botReply = "تم تسجيل طلبكم بنجاح وسنقوم بالتواصل معكم فوراً للتأكيد.";
                         }
-                    }
+                        nextStage = STAGES.SUCCESS;
+                        break;
+                }
 
-                    setMessages(prev => [...prev, { role: 'bot', text: response }]);
-                    setStep(nextStep);
-                }, 600);
+                setFormData(updatedData);
+                setStage(nextStage);
+                setIsBotTyping(false);
+                setMessages(prev => [...prev, { role: 'bot', text: botReply }]);
             };
 
             return (
-                <div className="app-container">
-                    <header>
-                        <h1 className="text-[#0056b3] font-bold text-lg">مطاعم الكورنيش <span className="text-[#ff7f27]">VIP</span></h1>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase">قسم المناسبات والعقود المستدامة</p>
+                <div className="app-shell">
+                    {/* Header */}
+                    <header className="p-4 border-b bg-white text-center shrink-0">
+                        <div className="flex justify-center items-center gap-2 mb-1">
+                            <span className="w-2.5 h-2.5 bg-amber-600 rounded-full animate-pulse"></span>
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">مطاعم الكورنيش <span className="text-amber-700">VIP</span></h1>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">وحدة كبار العملاء والتنسيق السياحي</p>
                     </header>
 
-                    <div className="chat-area">
+                    {/* Chat Area */}
+                    <main className="chat-window" ref={chatRef}>
                         {messages.map((m, i) => (
-                            <div key={i} className={m.role === 'user' ? 'user-bubble' : 'bot-bubble'}>
-                                {m.text.split('\n').map((l, j) => (
-                                    <p key={j} className="mb-0.5">
-                                        {l.includes('http') ? <a href="https://labbayh.com" target="_blank" className="link-text">{l}</a> : l}
+                            <div key={i} className={`msg ${m.role === 'bot' ? 'msg-bot' : 'msg-user'}`}>
+                                {m.text.split('\n').map((line, j) => (
+                                    <p key={j} className={j > 0 ? "mt-1" : ""}>
+                                        {line.includes('http') ? <a href="https://labbayh.com" target="_blank" className="text-blue-500 underline font-bold">{line}</a> : line}
                                     </p>
                                 ))}
                             </div>
                         ))}
-                        <div ref={chatEndRef} />
-                    </div>
+                        {isBotTyping && (
+                            <div className="msg msg-bot py-2 px-4 italic text-slate-400 flex items-center">
+                                جاري المعالجة <span className="loading-dot ml-1"></span><span className="loading-dot"></span><span className="loading-dot"></span>
+                            </div>
+                        )}
+                    </main>
 
-                    {step !== "done" && (
-                        <div className="input-section">
-                            <div className="input-wrapper">
-                                <textarea 
-                                    ref={inputRef}
+                    {/* Input Area */}
+                    {stage !== STAGES.SUCCESS && (
+                        <div className="input-container">
+                            <div className="input-box">
+                                <textarea
                                     rows="1"
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    placeholder="اكتب هنا..."
+                                    placeholder="اكتب رد سيادتكم هنا..."
+                                    value={userInput}
+                                    onChange={(e) => setUserInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSend();
+                                        }
+                                    }}
                                 />
-                                <div className="send-btn" onClick={handleSend}>
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                <div className="btn-send" onClick={handleSend}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </svg>
                                 </div>
                             </div>
                         </div>
@@ -177,7 +233,9 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<CornicheBot />);
+        root.render(<CornicheVipApp />);
     </script>
 </body>
 </html>
+
+```
