@@ -1,203 +1,116 @@
-import React, { useState, useEffect, useRef } from 'react';
+import os
+import re
+import requests
+from flask import Flask, request, jsonify
 
-const App = () => {
-    // رابط SheetDB الخاص بك
-    const API_URL = "https://sheetdb.io/api/v1/8ku63b4j58gja";
+app = Flask(__name__)
+
+# الرابط الخاص بك في SheetDB
+SHEETDB_API_URL = "https://sheetdb.io/api/v1/8ku63b4j58gja"
+
+# ذاكرة مؤقتة لحفظ حالة كل عميل أثناء المحادثة
+user_context = {}
+
+def validate_name(name):
+    # التحقق من وجود اسم ثنائي أو كلمة تدل على مؤسسة
+    org_keywords = ["شركة", "مستشفى", "مدرسة", "جمعية", "مؤسسة", "مركز", "فندق"]
+    is_org = any(key in name for key in org_keywords)
+    is_double_name = len(name.strip().split()) >= 2
+    return is_org or is_double_name
+
+def validate_phone(phone):
+    # التحقق من الرقم: 9 أرقام ويبدأ بـ 77 أو 78 أو 73
+    return bool(re.match(r"^(77|78|73)\d{7}$", phone))
+
+@app.route("/", methods=["POST"])
+@app.route("/webhook", methods=["POST"])
+def chatbot():
+    data = request.json
+    sender = data.get("sender") # معرف العميل (رقم هاتفه أو ID)
+    message = data.get("message", "").strip()
     
-    const [messages, setMessages] = useState([
-        { role: 'bot', text: "مرحباً بكم في وحدة كبار العملاء (VIP) بمطاعم الكورنيش السياحية.\nنتشرف بخدمتكم لتنسيق أرقى المناسبات وعقود التغذية.\n\nتفضل بتزويدنا بالاسم الثنائي لسيادتكم؟" }
-    ]);
+    if sender not in user_context:
+        user_context[sender] = {"step": "welcome"}
+
+    state = user_context[sender]
     
-    const [order, setOrder] = useState({
-        name: "", phone: "", location: "", date: "", 
-        type: "", quantity: "", details: "", timestamp: "", photo: ""
-    });
+    # الترويسة البصرية (ألوان بيضاء مع لمسات برتقالية وزرقاء عبر الرموز)
+    header = "┏━━━━━━━━━━━━━━━┓\n" \
+             "  *مطاعم الكورنيش السياحية* 🟠\n" \
+             "  الرد الآلي لخدمة العملاء VIP 🔵\n" \
+             "┗━━━━━━━━━━━━━━━┛\n\n"
 
-    const [step, setStep] = useState(1);
-    const [input, setInput] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const chatRef = useRef(null);
+    # 1. مرحلة الترحيب وطلب الاسم
+    if state["step"] == "welcome":
+        response = header + "أهلاً بك في خدمة العملاء VIP. يرجى التكرم بكتابة (الاسم الثنائي) أو (اسم المنشأة/الجهة):"
+        state["step"] = "get_name"
+        return jsonify({"reply": response})
 
-    useEffect(() => { 
-        if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
-    }, [messages]);
+    # 2. التحقق من الاسم
+    elif state["step"] == "get_name":
+        if validate_name(message):
+            state["name"] = message
+            response = "شكراً لك أستاذ/ة " + message + ".\nيرجى تزويدنا برقم هاتفك (9 أرقام يبدأ بـ 77، 78، أو 73):"
+            state["step"] = "get_phone"
+        else:
+            response = "عذراً، يجب إدخال اسم ثنائي أو اسم الجهة (شركة/مستشفى/إلخ) لنتمكن من متابعة طلبك:"
+        return jsonify({"reply": response})
 
-    // دالة الإرسال المعدلة لضمان تعبئة كافة الأعمدة
-    const submitToSheet = async (finalData) => {
-        setIsLoading(true);
-        try {
-            const currentTime = new Date().toLocaleString('ar-YE', { 
-                year: 'numeric', month: 'numeric', day: 'numeric',
-                hour: '2-digit', minute: '2-digit', second: '2-digit'
-            });
+    # 3. التحقق من رقم الهاتف
+    elif state["step"] == "get_phone":
+        if validate_phone(message):
+            state["phone"] = message
+            response = "كيف يمكننا خدمتك اليوم؟ يرجى اختيار نوع الطلب:\n\n1️⃣ مناسبة\n2️⃣ طلب عقد تغذية\n3️⃣ طلب شخصي"
+            state["step"] = "get_type"
+        else:
+            response = "الرقم غير صحيح. يرجى إدخال رقم يبدأ بـ (77 - 78 - 73) ومكون من 9 أرقام:"
+        return jsonify({"reply": response})
 
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    data: [{
-                        "name": finalData.name,
-                        "phone": finalData.phone,
-                        "location": finalData.location,
-                        "date": finalData.date,
-                        "type": finalData.type,
-                        "quantity": finalData.quantity,
-                        "details": finalData.details,
-                        "timestamp": currentTime,
-                        "photo": "لا يوجد"
-                    }] 
-                })
-            });
-            
-            if(response.ok) {
-                setMessages(prev => [...prev, { role: 'bot', text: "تم تسجيل كافة بياناتكم بنجاح في سجلاتنا.\nسيقوم فريق التنسيق بمراجعة الطلب والتواصل معكم فوراً.\n\nشكراً لثقتكم بمطاعم الكورنيش." }]);
-            } else { 
-                const errorData = await response.json();
-                console.error("SheetDB Error:", errorData);
-                throw new Error(); 
-            }
-        } catch (e) {
-            setMessages(prev => [...prev, { role: 'bot', text: "عذراً، حدث خطأ أثناء الحفظ التلقائي، ولكن تم استلام طلبكم داخلياً وسنتواصل معكم هاتفياً لتأكيد التفاصيل." }]);
+    # 4. توجيه الطلب (شخصي أو مناسبة)
+    elif state["step"] == "get_type":
+        if "شخصي" in message or "3" in message:
+            response = "للطلبات الشخصية، يسعدنا خدمتك عبر تطبيق (لبيه) مباشرة:\nhttps://play.google.com/store/apps/details?id=com.techsoft.daily_dish_app"
+            user_context.pop(sender) # إنهاء الجلسة
+        elif "مناسبة" in message or "عقد" in message or "1" in message or "2" in message:
+            state["type"] = message
+            response = "يرجى كتابة تفاصيل الطلب حسب التنسيق التالي:\n\nالوجبات:\nالمشروبات:\nالسلطات:\nالتحلية:\nملاحظات:"
+            state["step"] = "get_details"
+        else:
+            response = "يرجى اختيار أحد الخيارات (مناسبة / عقد تغذية / طلب شخصي)."
+        return jsonify({"reply": response})
+
+    # 5. استلام التفاصيل وطلب التاريخ
+    elif state["step"] == "get_details":
+        state["details"] = message
+        response = "متى موعد المناسبة؟ يرجى كتابة التاريخ بهذا التنسيق (مثال: 10/7/2026):"
+        state["step"] = "get_date"
+        return jsonify({"reply": response})
+
+    # 6. حفظ البيانات النهائية في قوقل شيت عبر SheetDB
+    elif state["step"] == "get_date":
+        state["date"] = message
+        # تجهيز البيانات لتطابق أعمدة الشيت الخاص بك
+        payload = {
+            "data": [{
+                "name": state["name"],
+                "phone": state["phone"],
+                "date": state["date"],
+                "type": state["type"],
+                "details": state["details"],
+                "timestamp": "Current Time" 
+            }]
         }
-        setIsLoading(false);
-        setStep(100); // إنهاء المحادثة
-    };
+        try:
+            res = requests.post(SHEETDB_API_URL, json=payload)
+            if res.status_code == 201:
+                response = "✅ تم تسجيل طلبك بنجاح في مطاعم الكورنيش السياحية. سيقوم القسم المختص بالتواصل معك قريباً."
+            else:
+                response = "عذراً، هناك مشكلة في الاتصال بالسيرفر. يرجى المحاولة لاحقاً."
+        except:
+            response = "حدث خطأ أثناء الحفظ. يرجى التواصل معنا هاتفياً."
+        
+        user_context.pop(sender) # مسح الذاكرة بعد النجاح
+        return jsonify({"reply": response})
 
-    const handleSend = () => {
-        const text = input.trim();
-        if (!text || isLoading) return;
-
-        setMessages(prev => [...prev, { role: 'user', text }]);
-        setInput("");
-
-        setTimeout(() => {
-            let botText = "";
-            let nextStep = step;
-            let updatedOrder = { ...order };
-
-            switch(step) {
-                case 1: // الاسم
-                    if(text.split(" ").length < 2) {
-                        botText = "نرجو تزويدنا بالاسم الثنائي الموقر للمتابعة؟";
-                    } else {
-                        updatedOrder.name = text;
-                        botText = "تشرفنا بك. يرجى تزويدنا برقم الهاتف المعتمد لسيادتكم؟";
-                        nextStep = 2;
-                    }
-                    break;
-                case 2: // الهاتف
-                    if(!/^\d{7,}$/.test(text.replace(/\s/g, ""))) {
-                        botText = "يرجى كتابة رقم هاتف صحيح لنتمكن من التواصل معكم؟";
-                    } else {
-                        updatedOrder.phone = text;
-                        botText = "نرجو تحديد موقع المناسبة بدقة (مثال: المكلا - الشرج - بجانب مدرسة...)؟";
-                        nextStep = 3;
-                    }
-                    break;
-                case 3: // الموقع
-                    updatedOrder.location = text;
-                    botText = "هل الطلب خاص بمناسبة (زواج، اجتماع، عقد تغذية) أم طلب شخصي؟";
-                    nextStep = 4;
-                    break;
-                case 4: // النوع
-                    if(text.includes("شخصي") || text.includes("فردي")) {
-                        botText = "عذراً، هذا القسم مخصص للمناسبات الكبرى. للطلبات الشخصية يرجى استخدام تطبيق (لبيه).";
-                        setMessages(prev => [...prev, { role: 'bot', text: botText }]);
-                        setStep(100);
-                        return;
-                    } else {
-                        updatedOrder.type = text;
-                        botText = "تفضل بوصف الأصناف المطلوبة لمناسبتكم الموقرة؟";
-                        nextStep = 5;
-                    }
-                    break;
-                case 5: // التفاصيل
-                    updatedOrder.details = text;
-                    botText = "ما هي الكمية الإجمالية التقديرية (عدد الوجبات أو المعازيم)؟";
-                    nextStep = 6;
-                    break;
-                case 6: // الكمية
-                    updatedOrder.quantity = text;
-                    botText = "يرجى تحديد تاريخ المناسبة (مثال: 20/10/2026)؟";
-                    nextStep = 7;
-                    break;
-                case 7: // التاريخ النهائي والإرسال
-                    updatedOrder.date = text;
-                    setOrder(updatedOrder);
-                    submitToSheet(updatedOrder); // إرسال الكائن المحدث كاملاً
-                    return;
-                default:
-                    break;
-            }
-
-            setOrder(updatedOrder);
-            setStep(nextStep);
-            if(botText) {
-                setMessages(prev => [...prev, { role: 'bot', text: botText }]);
-            }
-        }, 400);
-    };
-
-    return (
-        <div className="flex flex-col h-screen max-w-md mx-auto bg-white shadow-2xl overflow-hidden font-['Tajawal'] rtl" dir="rtl">
-            {isLoading && (
-                <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-50 p-6 text-center">
-                    <div className="w-10 h-10 border-4 border-slate-200 border-t-orange-500 rounded-full animate-spin"></div>
-                    <p className="mt-4 text-blue-900 font-bold">جاري تأمين وحفظ البيانات في السجل...</p>
-                </div>
-            )}
-            
-            <header className="bg-white p-5 text-center border-b-4 border-orange-500 shadow-sm">
-                <div className="text-blue-700 font-extrabold text-xl">مطاعم الكورنيش السياحية</div>
-                <div className="text-orange-500 text-xs font-bold mt-1 tracking-wider uppercase">وحدة كبار العملاء VIP</div>
-            </header>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50" ref={chatRef}>
-                {messages.map((m, i) => (
-                    <div key={i} className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${
-                        m.role === 'bot' 
-                        ? 'bg-white text-slate-800 self-start rounded-br-none border-r-4 border-blue-600 shadow-sm' 
-                        : 'bg-blue-600 text-white self-end rounded-bl-none'
-                    }`}>
-                        {m.text.split('\n').map((line, j) => (
-                            <p key={j} className="mb-1">{line}</p>
-                        ))}
-                    </div>
-                ))}
-            </div>
-
-            {step !== 100 && (
-                <div className="p-4 border-t bg-white">
-                    <div className="flex items-center bg-slate-100 rounded-full px-4 py-1 border-2 border-transparent focus-within:border-blue-600 focus-within:bg-white transition-all">
-                        <textarea 
-                            rows="1" 
-                            className="flex-1 bg-transparent border-none outline-none py-2 text-slate-700 resize-none font-sans"
-                            placeholder="اكتب ردكم هنا..." 
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSend();
-                                }
-                            }}
-                        />
-                        <button className="text-blue-600 p-2 active:scale-90 transition-transform" onClick={handleSend}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="22" y1="2" x2="11" y2="13"></line>
-                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-export default App;
-
-```
+if __name__ == "__main__":
+    app.run(debug=True)
