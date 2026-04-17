@@ -31,8 +31,19 @@
         function CornicheVIPApp() {
             const [input, setInput] = useState("");
             const [step, setStep] = useState("welcome");
-            // استخدام useRef للبيانات لضمان توفرها فوراً عند الإرسال دون انتظار الـ State
-            const collectedData = useRef({ name: "", phone: "", type: "", details: "", date: "" });
+            
+            // تهيئة البيانات لتطابق أعمدة قوقل شيت الموضحة في الصورة
+            const collectedData = useRef({ 
+                name: "",      // العمود A
+                phone: "",     // العمود B
+                location: "",  // العمود C
+                date: "",      // العمود D
+                type: "",      // العمود E
+                quantity: "",  // العمود F
+                details: "",   // العمود G
+                timestamp: ""  // العمود H
+            });
+
             const [messages, setMessages] = useState([
                 { role: 'bot', text: 'مرحباً بك في مطاعم الكورنيش السياحية.\nيرجى تسجيل اسمك الثنائي أو اسم المؤسسة للمتابعة:' }
             ]);
@@ -53,40 +64,46 @@
                 
                 if (step === "welcome") {
                     const isDouble = val.split(/\s+/).filter(s => s).length >= 2;
-                    const isOrg = ["شركة", "مستشفى", "مدرسة", "جمعية", "مؤسسة"].some(o => val.includes(o));
-                    if (isDouble || isOrg) {
+                    if (isDouble || val.length > 3) {
                         collectedData.current.name = val;
-                        nextReply = "شكراً لك. يرجى إدخال رقم هاتفك (9 أرقام يبدأ بـ 77، 78، أو 73):";
+                        nextReply = "شكراً لك. يرجى إدخال رقم هاتفك (9 أرقام):";
                         setStep("phone");
                     } else {
-                        nextReply = "نعتذر منك، يجب كتابة الاسم الثنائي (اسمان على الأقل) أو اسم المؤسسة للمتابعة:";
+                        nextReply = "نعتذر منك، يجب كتابة الاسم الثنائي (اسمان على الأقل) للمتابعة:";
                     }
                 } 
                 
                 else if (step === "phone") {
                     if (/^(77|78|73)\d{7}$/.test(val)) {
                         collectedData.current.phone = val;
-                        nextReply = "هل طلبك بخصوص:\n1. مناسبة\n2. طلب عقد تغذية\n3. طلب شخصي";
-                        setStep("type");
+                        nextReply = "يرجى تحديد موقع المناسبة أو التوصيل (المنطقة/الحي):";
+                        setStep("location");
                     } else {
-                        nextReply = "الرقم غير صحيح. اكتب الرقم الذي يبدأ بـ 77 - 78 - 73 ومكون من 9 أرقام:";
+                        nextReply = "الرقم غير صحيح. يرجى إدخال رقم هاتف يمني صحيح (9 أرقام):";
                     }
                 }
 
+                else if (step === "location") {
+                    collectedData.current.location = val;
+                    nextReply = "هل الطلب (مناسبة - عقد تغذية - شركة)؟";
+                    setStep("type");
+                }
+
                 else if (step === "type") {
-                    if (val.includes("شخصي") || val === "3") {
-                        nextReply = "للطلبات الشخصية، يرجى التوجه لتطبيق لبيه:\nhttps://play.google.com/store/apps/details?id=com.techsoft.daily_dish_app";
-                        setStep("welcome");
-                    } else {
-                        collectedData.current.type = val;
-                        nextReply = "يرجى تزويدنا بالتفاصيل:\nالوجبات والكمية:\nالمشروبات والكمية:\nالسلطات والكمية:\nالتحلية والكمية:\nملاحظات:";
-                        setStep("details");
-                    }
+                    collectedData.current.type = val;
+                    nextReply = "ما هي الكمية المطلوبة؟ (مثال: لعدد 100 شخص):";
+                    setStep("quantity");
+                }
+
+                else if (step === "quantity") {
+                    collectedData.current.quantity = val;
+                    nextReply = "يرجى كتابة تفاصيل الطلب (الأصناف، المشروبات، الملاحظات):";
+                    setStep("details");
                 }
 
                 else if (step === "details") {
                     collectedData.current.details = val;
-                    nextReply = "متى موعد المناسبة؟ يرجى كتابة التاريخ هكذا (مثال: 10/7/2026):";
+                    nextReply = "أخيراً، متى موعد المناسبة؟ يرجى كتابة التاريخ (مثال: 2026/07/20):";
                     setStep("date");
                 }
 
@@ -100,12 +117,15 @@
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({
                                 data: [{
-                                    name: collectedData.current.name,
-                                    phone: collectedData.current.phone,
-                                    type: collectedData.current.type,
-                                    details: collectedData.current.details,
-                                    date: collectedData.current.date,
-                                    timestamp: new Date().toLocaleString('ar-EG')
+                                    // الربط المباشر مع أسماء الأعمدة في شيت قوقل كما في الصورة
+                                    "A": collectedData.current.name, 
+                                    "phone": collectedData.current.phone,
+                                    "location": collectedData.current.location,
+                                    "date": collectedData.current.date,
+                                    "type": collectedData.current.type,
+                                    "quantity": collectedData.current.quantity,
+                                    "details": collectedData.current.details,
+                                    "timestamp": new Date().toLocaleString('ar-EG')
                                 }]
                             })
                         });
@@ -113,7 +133,7 @@
                         if (response.ok) {
                             nextReply = "✅ تم تسجيل كافة بياناتك بنجاح في مطاعم الكورنيش. سنتواصل معك قريباً.";
                         } else {
-                            nextReply = "تم استلام الطلب، سيقوم القسم المختص بمراجعته قريباً.";
+                            nextReply = "تم استلام طلبك بنجاح، سيقوم القسم المختص بمراجعته قريباً.";
                         }
                     } catch (e) {
                         nextReply = "شكراً لك، تم حفظ طلبك وسنتواصل معك فوراً.";
@@ -148,7 +168,7 @@
                         <div className="p-5 bg-white border-t border-slate-100 flex flex-col gap-3">
                             <textarea 
                                 className="w-full border border-slate-200 rounded-2xl p-4 outline-none focus:border-blue-500 transition-all text-sm resize-none h-24 bg-slate-50"
-                                placeholder="اكتب ردك هنا... (اضغط Enter للسطر الجديد)"
+                                placeholder="اكتب ردك هنا..."
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                             />
