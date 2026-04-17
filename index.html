@@ -31,18 +31,46 @@
         function CornicheVIPApp() {
             const [input, setInput] = useState("");
             const [step, setStep] = useState("welcome");
-            const collectedData = useRef({ 
-                name: "", phone: "", location: "", date: "", type: "", quantity: "", details: "" 
-            });
-
+            const dataRef = useRef({ name: "", phone: "", type: "", details: "", date: "" });
             const [messages, setMessages] = useState([
-                { role: 'bot', text: 'مرحباً بك في مطاعم الكورنيش السياحية.\nيرجى تسجيل اسمك الثنائي للمتابعة:' }
+                { role: 'bot', text: 'مرحباً بك في مطاعم الكورنيش السياحية.\nيرجى تسجيل اسمك الثنائي أو اسم المؤسسة للمتابعة:' }
             ]);
             const scrollRef = useRef(null);
 
             useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
             const addMsg = (role, text) => setMessages(prev => [...prev, { role, text }]);
+
+            const sendToSheet = async () => {
+                const payload = {
+                    data: [{
+                        name: dataRef.current.name,
+                        phone: dataRef.current.phone,
+                        location: "",
+                        date: dataRef.current.date,
+                        type: dataRef.current.type,
+                        quantity: "",
+                        details: dataRef.current.details,
+                        timestamp: new Date().toLocaleString('ar-EG')
+                    }]
+                };
+
+                console.log("📤 Sending to Sheet:", payload);
+
+                try {
+                    const response = await fetch("https://sheetdb.io/api/v1/8ku63b4j58gja", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    console.log("✅ Sheet Response:", result);
+                    return response.ok;
+                } catch (e) {
+                    console.error("❌ Error:", e);
+                    return false;
+                }
+            };
 
             const handleSend = async () => {
                 const val = input.trim();
@@ -52,67 +80,63 @@
                 setInput("");
 
                 let nextReply = "";
-                
+
                 if (step === "welcome") {
-                    collectedData.current.name = val;
-                    nextReply = "شكراً لك. يرجى إدخال رقم هاتفك:";
-                    setStep("phone");
-                } 
+                    const isDouble = val.split(/\s+/).filter(s => s).length >= 2;
+                    const isOrg = ["شركة", "مستشفى", "مدرسة", "جمعية", "مؤسسة"].some(o => val.includes(o));
+                    if (isDouble || isOrg) {
+                        dataRef.current.name = val;
+                        nextReply = "شكراً لك. يرجى إدخال رقم هاتفك (9 أرقام يبدأ بـ 77، 78، أو 73):";
+                        setStep("phone");
+                    } else {
+                        nextReply = "نعتذر منك، يجب كتابة الاسم الثنائي (اسمان على الأقل) أو اسم المؤسسة للمتابعة:";
+                    }
+                }
+
                 else if (step === "phone") {
-                    collectedData.current.phone = val;
-                    nextReply = "يرجى تحديد الموقع (المدينة/الحي):";
-                    setStep("location");
+                    if (/^(77|78|73)\d{7}$/.test(val)) {
+                        dataRef.current.phone = val;
+                        nextReply = "هل طلبك بخصوص:\n1. مناسبة\n2. طلب عقد تغذية\n3. طلب شخصي";
+                        setStep("type");
+                    } else {
+                        nextReply = "الرقم غير صحيح. اكتب الرقم الذي يبدأ بـ 77 - 78 - 73 ومكون من 9 أرقام:";
+                    }
                 }
-                else if (step === "location") {
-                    collectedData.current.location = val;
-                    nextReply = "نوع الطلب (مناسبة، عقد تغذية، إلخ)؟";
-                    setStep("type");
-                }
+
                 else if (step === "type") {
-                    collectedData.current.type = val;
-                    nextReply = "ما هي الكمية المطلوبة؟";
-                    setStep("quantity");
+                    if (val.includes("شخصي") || val === "3") {
+                        nextReply = "للطلبات الشخصية، يرجى التوجه لتطبيق لبيه:\nhttps://play.google.com/store/apps/details?id=com.techsoft.daily_dish_app";
+                        setStep("welcome");
+                    } else {
+                        let typeLabel = val;
+                        if (val === "1") typeLabel = "مناسبة";
+                        if (val === "2") typeLabel = "عقد تغذية";
+                        dataRef.current.type = typeLabel;
+                        nextReply = "يرجى تزويدنا بالتفاصيل:\nالوجبات والكمية:\nالمشروبات والكمية:\nالسلطات والكمية:\nالتحلية والكمية:\nملاحظات:";
+                        setStep("details");
+                    }
                 }
-                else if (step === "quantity") {
-                    collectedData.current.quantity = val;
-                    nextReply = "يرجى كتابة تفاصيل الطلب والوجبات:";
-                    setStep("details");
-                }
+
                 else if (step === "details") {
-                    collectedData.current.details = val;
-                    nextReply = "متى موعد المناسبة؟ (مثال: 2026/07/20)";
+                    dataRef.current.details = val;
+                    nextReply = "متى موعد المناسبة؟ يرجى كتابة التاريخ هكذا (مثال: 10/7/2026):";
                     setStep("date");
                 }
-                else if (step === "date") {
-                    collectedData.current.date = val;
-                    addMsg('bot', "جاري إرسال طلبك إلى النظام... ✨");
-                    
-                    try {
-                        const response = await fetch("https://sheetdb.io/api/v1/8ku63b4j58gja", {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                data: [{
-                                    "name": collectedData.current.name,
-                                    "phone": collectedData.current.phone,
-                                    "location": collectedData.current.location,
-                                    "date": collectedData.current.date,
-                                    "type": collectedData.current.type,
-                                    "quantity": collectedData.current.quantity,
-                                    "details": collectedData.current.details,
-                                    "timestamp": new Date().toLocaleString('ar-EG')
-                                }]
-                            })
-                        });
 
-                        if (response.ok) {
-                            nextReply = "✅ تم تسجيل بياناتك بنجاح في مطاعم الكورنيش. سنتواصل معك قريباً.";
-                        } else {
-                            nextReply = "تم استلام الطلب، سيقوم القسم المختص بمراجعته.";
-                        }
-                    } catch (e) {
-                        nextReply = "شكراً لك، تم استلام طلبك.";
+                else if (step === "date") {
+                    dataRef.current.date = val;
+                    addMsg('bot', "جاري تسجيل طلبك الـ VIP بالكامل... ✨");
+
+                    const ok = await sendToSheet();
+
+                    if (ok) {
+                        nextReply = "✅ تم تسجيل كافة بياناتك بنجاح في مطاعم الكورنيش. سنتواصل معك قريباً.";
+                    } else {
+                        nextReply = "تم استلام الطلب، سيقوم القسم المختص بمراجعته قريباً.";
                     }
+
+                    // إعادة تهيئة البيانات للطلب القادم
+                    dataRef.current = { name: "", phone: "", type: "", details: "", date: "" };
                     setStep("welcome");
                 }
 
@@ -124,8 +148,9 @@
                     <div className="main-card flex-1 flex flex-col">
                         <header className="header-ui p-6 text-center">
                             <h1 className="text-2xl font-bold text-slate-800">مطاعم الكورنيش السياحية</h1>
-                            <p className="text-blue-600 text-xs font-bold mt-1 tracking-widest">نظام خدمة العملاء VIP</p>
+                            <p className="text-blue-600 text-xs font-bold mt-1 tracking-widest">الرد الآلي لخدمة العملاء VIP</p>
                         </header>
+
                         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#F8FAFC]">
                             {messages.map((m, i) => (
                                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -138,14 +163,15 @@
                             ))}
                             <div ref={scrollRef} />
                         </div>
+
                         <div className="p-5 bg-white border-t border-slate-100 flex flex-col gap-3">
-                            <textarea 
+                            <textarea
                                 className="w-full border border-slate-200 rounded-2xl p-4 outline-none focus:border-blue-500 transition-all text-sm resize-none h-24 bg-slate-50"
-                                placeholder="اكتب هنا..."
+                                placeholder="اكتب ردك هنا..."
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                             />
-                            <button 
+                            <button
                                 onClick={handleSend}
                                 className="orange-send text-white py-4 rounded-2xl font-bold text-sm shadow-lg"
                             >
