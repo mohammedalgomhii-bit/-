@@ -1,116 +1,211 @@
-import os
-import re
-import requests
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
-# الرابط الخاص بك في SheetDB
-SHEETDB_API_URL = "https://sheetdb.io/api/v1/8ku63b4j58gja"
-
-# ذاكرة مؤقتة لحفظ حالة كل عميل أثناء المحادثة
-user_context = {}
-
-def validate_name(name):
-    # التحقق من وجود اسم ثنائي أو كلمة تدل على مؤسسة
-    org_keywords = ["شركة", "مستشفى", "مدرسة", "جمعية", "مؤسسة", "مركز", "فندق"]
-    is_org = any(key in name for key in org_keywords)
-    is_double_name = len(name.strip().split()) >= 2
-    return is_org or is_double_name
-
-def validate_phone(phone):
-    # التحقق من الرقم: 9 أرقام ويبدأ بـ 77 أو 78 أو 73
-    return bool(re.match(r"^(77|78|73)\d{7}$", phone))
-
-@app.route("/", methods=["POST"])
-@app.route("/webhook", methods=["POST"])
-def chatbot():
-    data = request.json
-    sender = data.get("sender") # معرف العميل (رقم هاتفه أو ID)
-    message = data.get("message", "").strip()
-    
-    if sender not in user_context:
-        user_context[sender] = {"step": "welcome"}
-
-    state = user_context[sender]
-    
-    # الترويسة البصرية (ألوان بيضاء مع لمسات برتقالية وزرقاء عبر الرموز)
-    header = "┏━━━━━━━━━━━━━━━┓\n" \
-             "  *مطاعم الكورنيش السياحية* 🟠\n" \
-             "  الرد الآلي لخدمة العملاء VIP 🔵\n" \
-             "┗━━━━━━━━━━━━━━━┛\n\n"
-
-    # 1. مرحلة الترحيب وطلب الاسم
-    if state["step"] == "welcome":
-        response = header + "أهلاً بك في خدمة العملاء VIP. يرجى التكرم بكتابة (الاسم الثنائي) أو (اسم المنشأة/الجهة):"
-        state["step"] = "get_name"
-        return jsonify({"reply": response})
-
-    # 2. التحقق من الاسم
-    elif state["step"] == "get_name":
-        if validate_name(message):
-            state["name"] = message
-            response = "شكراً لك أستاذ/ة " + message + ".\nيرجى تزويدنا برقم هاتفك (9 أرقام يبدأ بـ 77، 78، أو 73):"
-            state["step"] = "get_phone"
-        else:
-            response = "عذراً، يجب إدخال اسم ثنائي أو اسم الجهة (شركة/مستشفى/إلخ) لنتمكن من متابعة طلبك:"
-        return jsonify({"reply": response})
-
-    # 3. التحقق من رقم الهاتف
-    elif state["step"] == "get_phone":
-        if validate_phone(message):
-            state["phone"] = message
-            response = "كيف يمكننا خدمتك اليوم؟ يرجى اختيار نوع الطلب:\n\n1️⃣ مناسبة\n2️⃣ طلب عقد تغذية\n3️⃣ طلب شخصي"
-            state["step"] = "get_type"
-        else:
-            response = "الرقم غير صحيح. يرجى إدخال رقم يبدأ بـ (77 - 78 - 73) ومكون من 9 أرقام:"
-        return jsonify({"reply": response})
-
-    # 4. توجيه الطلب (شخصي أو مناسبة)
-    elif state["step"] == "get_type":
-        if "شخصي" in message or "3" in message:
-            response = "للطلبات الشخصية، يسعدنا خدمتك عبر تطبيق (لبيه) مباشرة:\nhttps://play.google.com/store/apps/details?id=com.techsoft.daily_dish_app"
-            user_context.pop(sender) # إنهاء الجلسة
-        elif "مناسبة" in message or "عقد" in message or "1" in message or "2" in message:
-            state["type"] = message
-            response = "يرجى كتابة تفاصيل الطلب حسب التنسيق التالي:\n\nالوجبات:\nالمشروبات:\nالسلطات:\nالتحلية:\nملاحظات:"
-            state["step"] = "get_details"
-        else:
-            response = "يرجى اختيار أحد الخيارات (مناسبة / عقد تغذية / طلب شخصي)."
-        return jsonify({"reply": response})
-
-    # 5. استلام التفاصيل وطلب التاريخ
-    elif state["step"] == "get_details":
-        state["details"] = message
-        response = "متى موعد المناسبة؟ يرجى كتابة التاريخ بهذا التنسيق (مثال: 10/7/2026):"
-        state["step"] = "get_date"
-        return jsonify({"reply": response})
-
-    # 6. حفظ البيانات النهائية في قوقل شيت عبر SheetDB
-    elif state["step"] == "get_date":
-        state["date"] = message
-        # تجهيز البيانات لتطابق أعمدة الشيت الخاص بك
-        payload = {
-            "data": [{
-                "name": state["name"],
-                "phone": state["phone"],
-                "date": state["date"],
-                "type": state["type"],
-                "details": state["details"],
-                "timestamp": "Current Time" 
-            }]
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مطاعم الكورنيش - خدمة VIP</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pure-white: #FFFFFF;
+            --soft-gray: #F8FAFC;
+            --brand-orange: #FF782D;
+            --brand-blue: #0056D2;
+            --text-main: #1E293B;
         }
-        try:
-            res = requests.post(SHEETDB_API_URL, json=payload)
-            if res.status_code == 201:
-                response = "✅ تم تسجيل طلبك بنجاح في مطاعم الكورنيش السياحية. سيقوم القسم المختص بالتواصل معك قريباً."
-            else:
-                response = "عذراً، هناك مشكلة في الاتصال بالسيرفر. يرجى المحاولة لاحقاً."
-        except:
-            response = "حدث خطأ أثناء الحفظ. يرجى التواصل معنا هاتفياً."
-        
-        user_context.pop(sender) # مسح الذاكرة بعد النجاح
-        return jsonify({"reply": response})
+        body { 
+            font-family: 'Tajawal', sans-serif; 
+            background: linear-gradient(135deg, #F0F4F8 0%, #FFFFFF 100%);
+            height: 100vh; margin: 0; 
+        }
+        .main-card {
+            background: var(--pure-white);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 86, 210, 0.05);
+            border: 1px solid rgba(0, 86, 210, 0.1);
+        }
+        .header-gradient {
+            background: white;
+            border-bottom: 3px solid var(--soft-gray);
+            position: relative;
+        }
+        .header-gradient::after {
+            content: ''; position: absolute; bottom: -3px; left: 0; width: 40%; height: 3px; background: var(--brand-orange);
+        }
+        .header-gradient::before {
+            content: ''; position: absolute; bottom: -3px; right: 0; width: 60%; height: 3px; background: var(--brand-blue);
+        }
+        .bot-msg {
+            background: white;
+            border-right: 4px solid var(--brand-blue);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .user-msg {
+            background: linear-gradient(135deg, var(--brand-blue) 0%, #003B91 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 86, 210, 0.2);
+        }
+        .input-area {
+            border-top: 1px solid #EDF2F7;
+            background: #FFFFFF;
+        }
+        .orange-btn {
+            background: var(--brand-orange);
+            box-shadow: 0 4px 14px rgba(255, 120, 45, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-if __name__ == "__main__":
-    app.run(debug=True)
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function CornicheChat() {
+            const [input, setInput] = useState("");
+            const [step, setStep] = useState("welcome");
+            const [data, setData] = useState({});
+            const [messages, setMessages] = useState([
+                { role: 'bot', text: 'مرحباً بك في مطاعم الكورنيش السياحية.\nيرجى تسجيل اسمك الثنائي أو اسم المؤسسة (شركة - مستشفى - مدرسة - جمعية) للمتابعة:' }
+            ]);
+            const scrollRef = useRef(null);
+
+            useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+            const handleSend = async () => {
+                const val = input.trim();
+                if (!val) return;
+
+                setMessages(prev => [...prev, { role: 'user', text: val }]);
+                setInput("");
+
+                let nextReply = "";
+                
+                if (step === "welcome") {
+                    const isDouble = val.split(" ").length >= 2;
+                    const isOrg = ["شركة", "مستشفى", "مدرسة", "جمعية", "مؤسسة"].some(o => val.includes(o));
+                    
+                    if (isDouble || isOrg) {
+                        setData({...data, name: val});
+                        nextReply = "شكراً لك. يرجى إدخال رقم هاتفك (يجب أن يتكون من 9 أرقام ويبدأ بـ 77 أو 78 أو 73):";
+                        setStep("phone");
+                    } else {
+                        nextReply = "نعتذر منك، يجب كتابة الاسم الثنائي أو اسم المؤسسة لنتمكن من خدمتك:";
+                    }
+                } 
+                
+                else if (step === "phone") {
+                    const isValid = /^(77|78|73)\d{7}$/.test(val);
+                    if (isValid) {
+                        setData({...data, phone: val});
+                        nextReply = "هل طلبك بخصوص:\n1. مناسبة\n2. طلب عقد تغذية\n3. طلب شخصي";
+                        setStep("type");
+                    } else {
+                        nextReply = "عذراً، الرقم غير صحيح. اكتب الرقم الذي يبدأ بـ 77 - 78 - 73 ومكون من 9 أرقام:";
+                    }
+                }
+
+                else if (step === "type") {
+                    if (val.includes("شخصي")) {
+                        nextReply = "للطلبات الشخصية، يرجى التوجه لتطبيق لبيه عبر الرابط:\nhttps://play.google.com/store/apps/details?id=com.techsoft.daily_dish_app";
+                        setStep("welcome");
+                    } else if (val.includes("مناسبة") || val.includes("تغذية")) {
+                        setData({...data, type: val});
+                        nextReply = "يرجى تزويدنا بالتفاصيل التالية:\nالوجبات:\nالمشروبات:\nالسلطات:\nالتحلية:\nملاحظات:";
+                        setStep("details");
+                    } else {
+                        nextReply = "يرجى اختيار (مناسبة / عقد تغذية / شخصي):";
+                    }
+                }
+
+                else if (step === "details") {
+                    setData({...data, details: val});
+                    nextReply = "أخيراً، يرجى تحديد موعد المناسبة (مثال: 10/7/2026):";
+                    setStep("date");
+                }
+
+                else if (step === "date") {
+                    const finalData = {...data, date: val};
+                    nextReply = "جاري حفظ طلبك في سجلاتنا الـ VIP... ✨";
+                    
+                    // إرسال البيانات إلى SheetDB
+                    try {
+                        await fetch("https://sheetdb.io/api/v1/8ku63b4j58gja", {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                data: [{
+                                    name: finalData.name,
+                                    phone: finalData.phone,
+                                    date: finalData.date,
+                                    type: finalData.type,
+                                    details: finalData.details,
+                                    timestamp: new Date().toLocaleString('ar-EG')
+                                }]
+                            })
+                        });
+                        nextReply = "✅ تم تسجيل طلبك بنجاح. مطاعم الكورنيش تتمنى لكم يوماً سعيداً!";
+                    } catch (e) {
+                        nextReply = "تم استلام الطلب، وسنتواصل معك قريباً.";
+                    }
+                    setStep("welcome");
+                }
+
+                setTimeout(() => {
+                    setMessages(prev => [...prev, { role: 'bot', text: nextReply }]);
+                }, 600);
+            };
+
+            return (
+                <div className="max-w-xl mx-auto h-screen flex flex-col p-4 md:p-8">
+                    <div className="main-card flex-1 flex flex-col overflow-hidden">
+                        
+                        <header className="header-gradient p-6">
+                            <h1 className="text-2xl font-bold text-slate-800">مطاعم الكورنيش السياحية</h1>
+                            <p className="text-blue-600 font-medium text-sm">الرد الآلي لخدمة العملاء VIP</p>
+                        </header>
+
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50">
+                            {messages.map((m, i) => (
+                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`p-4 rounded-2xl max-w-[90%] whitespace-pre-line text-sm leading-relaxed shadow-sm ${
+                                        m.role === 'user' ? 'user-msg' : 'bot-msg text-slate-700'
+                                    }`}>
+                                        {m.text}
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={scrollRef} />
+                        </div>
+
+                        <div className="input-area p-6">
+                            <div className="flex gap-2">
+                                <input 
+                                    className="flex-1 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all text-sm"
+                                    placeholder="اكتب رسالتك..."
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                                />
+                                <button 
+                                    onClick={handleSend}
+                                    className="orange-btn text-white px-6 py-3 rounded-xl font-bold hover:scale-105 active:scale-95 transition-all"
+                                >
+                                    إرسال
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CornicheChat />);
+    </script>
+</body>
+</html>
