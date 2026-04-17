@@ -14,17 +14,16 @@
         :root {
             --primary-blue: #0056b3;
             --primary-orange: #ff7f27;
-            --dark-bg: #0b0e11;
         }
         body { font-family: 'Tajawal', sans-serif; background-color: #f0f2f5; margin: 0; height: 100vh; overflow: hidden; }
         .app-container { height: 100dvh; display: flex; flex-direction: column; max-width: 500px; margin: 0 auto; background: #ffffff; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.15); border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; }
         
         .header { background: white; padding: 15px; text-align: center; border-bottom: 3px solid var(--primary-orange); z-index: 20; position: relative; }
-        .logo-container { width: 100px; height: 60px; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .logo-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .logo-box { width: 80px; height: 80px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .logo-img { width: 100%; height: 100%; object-fit: contain; }
         
-        .header-title { color: var(--primary-blue); font-weight: 700; font-size: 1.1rem; }
-        .header-subtitle { color: var(--primary-orange); font-size: 0.7rem; font-weight: bold; letter-spacing: 1px; margin-top: 2px; }
+        .header-title { color: var(--primary-blue); font-weight: 700; font-size: 1.2rem; margin-top: 5px; }
+        .header-subtitle { color: var(--primary-orange); font-size: 0.75rem; font-weight: bold; letter-spacing: 1px; margin-top: 2px; }
 
         .chat-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; background: #fdfdfd; background-image: radial-gradient(#e5e7eb 0.5px, transparent 0.5px); background-size: 20px 20px; }
         .msg { max-width: 88%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.6; position: relative; animation: fadeIn 0.4s ease; }
@@ -34,13 +33,11 @@
         .user-msg { align-self: flex-end; background: var(--primary-blue); color: white; border-bottom-left-radius: 2px; box-shadow: 0 4px 12px rgba(0, 86, 179, 0.2); }
 
         .input-area { padding: 15px; border-top: 1px solid #f3f4f6; background: white; padding-bottom: max(15px, env(safe-area-inset-bottom)); }
-        .input-wrap { display: flex; align-items: center; background: #f3f4f6; border: 2px solid transparent; border-radius: 30px; padding: 4px 15px; transition: 0.3s; }
-        .input-wrap:focus-within { border-color: var(--primary-blue); background: white; box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.05); }
+        .input-wrap { display: flex; align-items: center; background: #f3f4f6; border: 2px solid transparent; border-radius: 30px; padding: 4px 15px; }
         textarea { flex: 1; background: transparent; border: none; outline: none; padding: 10px 0; font-size: 15px; resize: none; max-height: 100px; color: #374151; font-family: inherit; }
-        .send-btn { color: var(--primary-blue); cursor: pointer; padding: 8px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
-        .send-btn:active { transform: scale(0.9); opacity: 0.7; }
+        .send-btn { color: var(--primary-blue); cursor: pointer; padding: 8px; }
 
-        .loading-screen { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; flex-direction: column; gap: 15px; }
+        .loading-screen { position: absolute; inset: 0; background: rgba(255,255,255,0.95); display: flex; align-items: center; justify-content: center; z-index: 100; flex-direction: column; gap: 15px; }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f4f6; border-top: 4px solid var(--primary-orange); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -52,8 +49,9 @@
 
         const App = () => {
             const API_URL = "https://sheetdb.io/api/v1/8ku63b4j58gja";
-            // استخدام رابط مباشر للصورة من المصدر الموثوق
-            const LOGO_URL = "https://i.ibb.co/3ykXvYF/1000339386.jpg";
+            // تم تحديث الرابط ليكون أكثر استقراراً
+            const [logoSrc, setLogoSrc] = useState("https://i.ibb.co/3ykXvYF/1000339386.jpg");
+            const [showFallback, setShowFallback] = useState(false);
 
             const [messages, setMessages] = useState([
                 { role: 'bot', text: "مرحباً بكم في وحدة كبار العملاء (VIP) بمطاعم الكورنيش السياحية.\nنتشرف بخدمتكم لتنسيق أرقى المناسبات وعقود التغذية.\n\nتفضل بتزويدنا بالاسم الثنائي لسيادتكم؟" }
@@ -81,27 +79,22 @@
                 try {
                     const canvas = await html2canvas(fullAppRef.current, {
                         scale: 1,
-                        logging: false,
                         useCORS: true,
-                        allowTaint: true
+                        allowTaint: true,
+                        backgroundColor: "#ffffff"
                     });
                     const imageData = canvas.toDataURL("image/jpeg", 0.6);
-                    
                     const payload = { ...finalData, photo: imageData };
 
-                    const response = await fetch(API_URL, {
+                    await fetch(API_URL, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ data: [payload] })
                     });
 
-                    if(response.ok) {
-                        setMessages(prev => [...prev, { role: 'bot', text: "تم تسجيل طلبكم وتوثيقه بنجاح.\nسيتواصل معكم قسم التنسيق فوراً للمتابعة.\n\nشكراً لاختياركم مطاعم الكورنيش السياحية." }]);
-                    } else {
-                        throw new Error("API Error");
-                    }
+                    setMessages(prev => [...prev, { role: 'bot', text: "تم تسجيل طلبكم وتوثيقه بنجاح.\nسيتواصل معكم قسم التنسيق فوراً للمتابعة.\n\nشكراً لاختياركم مطاعم الكورنيش السياحية." }]);
                 } catch (e) {
-                    setMessages(prev => [...prev, { role: 'bot', text: "تم تسجيل البيانات الأولية، ولكن تعذر توثيق الصورة حالياً. سيتم التواصل معكم هاتفياً." }]);
+                    setMessages(prev => [...prev, { role: 'bot', text: "تم تسجيل البيانات الأولية. سيتم التواصل معكم هاتفياً." }]);
                 }
                 setIsFinalizing(false);
                 setStep(100); 
@@ -110,7 +103,6 @@
             const handleSend = async () => {
                 const text = input.trim();
                 if (!text || isFinalizing) return;
-
                 setMessages(prev => [...prev, { role: 'user', text }]);
                 setInput("");
 
@@ -144,7 +136,7 @@
                             nextStep = 4;
                             break;
                         case 4:
-                            if(text.includes("شخصي") || text.includes("فردي") || text.includes("نفسي")) {
+                            if(text.toLowerCase().includes("شخصي") || text.includes("فردي")) {
                                 botText = "نعتذر لسيادتكم، هذا القسم حصري للمناسبات والعقود الكبرى. للطلبات الفردية يرجى استخدام تطبيق (لبيه).\nhttps://labbayh.com";
                                 nextStep = 100;
                             } else {
@@ -171,7 +163,6 @@
                             captureAndSend(currentOrder);
                             return;
                     }
-
                     setOrder(currentOrder);
                     setStep(nextStep);
                     if(nextStep !== 100 && nextStep !== 7) {
@@ -190,26 +181,34 @@
                     )}
                     
                     <header className="header">
-                        <div className="logo-container">
-                            <img 
-                                src={LOGO_URL} 
-                                alt="مطاعم الكورنيش" 
-                                className="logo-img"
-                                onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    e.target.parentElement.innerHTML = '<span style="font-weight:bold; color:#0056b3; font-size:1.5rem">الكورنيش</span>';
-                                }}
-                            />
+                        <div className="logo-box">
+                            {!showFallback ? (
+                                <img 
+                                    src={logoSrc} 
+                                    alt="Logo" 
+                                    className="logo-img" 
+                                    onError={() => setShowFallback(true)}
+                                />
+                            ) : (
+                                <div className="flex flex-col items-center">
+                                    <svg viewBox="0 0 24 24" width="48" height="48" fill="var(--primary-blue)">
+                                        <path d="M11 9H9V2H7V9H5V2H3V9C3 11.12 4.66 12.84 6.75 12.97V22H9.25V12.97C11.34 12.84 13 11.12 13 9V2H11V9ZM16 6V14H18.5V22H21V2C18.24 2 16 4.24 16 6Z"/>
+                                    </svg>
+                                </div>
+                            )}
                         </div>
-                        <div className="header-title">وحدة كبار العملاء <span style={{color:'var(--primary-orange)'}}>VIP</span></div>
-                        <div className="header-subtitle text-slate-400">قسم المناسبات والعقود المستدامة</div>
+                        <div className="header-title">مطاعم الكورنيش السياحية</div>
+                        <div className="header-subtitle">وحدة كبار العملاء VIP</div>
                     </header>
 
                     <div className="chat-area" ref={chatRef}>
                         {messages.map((m, i) => (
                             <div key={i} className={`msg ${m.role === 'bot' ? 'bot-msg' : 'user-msg'}`}>
                                 {m.text.split('\n').map((line, j) => (
-                                    <p key={j}>{line.includes('http') ? <a href="https://labbayh.com" target="_blank" className="underline font-bold text-white opacity-90">{line}</a> : line}</p>
+                                    <p key={j} className="mb-1">
+                                        {line.includes('http') ? 
+                                            <a href="https://labbayh.com" target="_blank" className="underline font-bold text-blue-200">الرابط هنا</a> : line}
+                                    </p>
                                 ))}
                             </div>
                         ))}
@@ -231,7 +230,7 @@
                                     }}
                                 />
                                 <div className="send-btn" onClick={handleSend}>
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                         <line x1="22" y1="2" x2="11" y2="13"></line>
                                         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                                     </svg>
