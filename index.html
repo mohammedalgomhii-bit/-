@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>مطاعم الكورنيش VIP - التنسيق الذكي</title>
+    <title>مطاعم الكورنيش VIP - نظام التنسيق</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -14,29 +14,30 @@
             --primary-blue: #0056b3;
             --primary-orange: #ff7f27;
         }
-        body { font-family: 'Tajawal', sans-serif; background-color: #f0f2f5; margin: 0; height: 100vh; overflow: hidden; }
-        .app-container { height: 100dvh; display: flex; flex-direction: column; max-width: 500px; margin: 0 auto; background: #ffffff; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.15); border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; }
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8f9fa; margin: 0; height: 100vh; overflow: hidden; }
+        .app-container { height: 100dvh; display: flex; flex-direction: column; max-width: 500px; margin: 0 auto; background: #ffffff; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.1); }
         
-        .header { background: white; padding: 20px 15px; text-align: center; border-bottom: 4px solid var(--primary-orange); z-index: 20; position: relative; }
-        .brand-name { color: var(--primary-blue); font-weight: 800; font-size: 1.5rem; line-height: 1.2; }
-        .brand-subtitle { color: var(--primary-orange); font-size: 0.8rem; font-weight: 700; margin-top: 5px; letter-spacing: 1px; }
+        .header { background: white; padding: 20px 15px; text-align: center; border-bottom: 4px solid var(--primary-orange); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .brand-name { color: var(--primary-blue); font-weight: 800; font-size: 1.5rem; }
+        .brand-subtitle { color: var(--primary-orange); font-size: 0.85rem; font-weight: 700; margin-top: 4px; letter-spacing: 1px; }
 
-        .chat-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; background: #fdfdfd; }
-        .msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 14.5px; line-height: 1.6; animation: fadeIn 0.3s ease; position: relative; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .chat-area { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; background: #fdfdfd; }
+        .msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.6; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .bot-msg { align-self: flex-start; background: #f0f4f8; color: #1f2937; border-bottom-right-radius: 2px; border-right: 4px solid var(--primary-blue); }
+        .bot-msg { align-self: flex-start; background: #f1f5f9; color: #1e293b; border-bottom-right-radius: 2px; border-right: 4px solid var(--primary-blue); }
         .user-msg { align-self: flex-end; background: var(--primary-blue); color: white; border-bottom-left-radius: 2px; }
 
-        .input-area { padding: 15px; border-top: 1px solid #eee; background: white; padding-bottom: max(15px, env(safe-area-inset-bottom)); }
-        .input-wrap { display: flex; align-items: center; background: #f3f4f6; border-radius: 30px; padding: 5px 15px; border: 2px solid transparent; transition: 0.3s; }
-        .input-wrap:focus-within { border-color: var(--primary-blue); background: white; }
+        .input-area { padding: 15px; border-top: 1px solid #edf2f7; background: white; padding-bottom: max(15px, env(safe-area-inset-bottom)); }
+        .input-wrap { display: flex; align-items: center; background: #f1f5f9; border-radius: 30px; padding: 4px 16px; border: 2px solid transparent; transition: 0.3s; }
+        .input-wrap:focus-within { border-color: var(--primary-blue); background: white; box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.1); }
         
-        textarea { flex: 1; background: transparent; border: none; outline: none; padding: 10px 0; font-size: 15px; resize: none; max-height: 100px; font-family: inherit; }
-        .send-btn { color: var(--primary-blue); cursor: pointer; padding: 5px; margin-right: 5px; }
+        textarea { flex: 1; background: transparent; border: none; outline: none; padding: 10px 0; font-size: 15px; resize: none; max-height: 100px; font-family: inherit; color: #334155; }
+        .send-btn { color: var(--primary-blue); cursor: pointer; padding: 6px; transition: 0.2s; }
+        .send-btn:active { transform: scale(0.9); }
 
-        .loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 50; flex-direction: column; }
-        .loader { width: 30px; height: 30px; border: 3px solid #f3f4f6; border-top: 3px solid var(--primary-orange); border-radius: 50%; animation: spin 1s linear infinite; }
+        .status-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; flex-direction: column; text-align: center; padding: 20px; }
+        .spinner { width: 35px; height: 35px; border: 4px solid #e2e8f0; border-top: 4px solid var(--primary-orange); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
@@ -54,7 +55,7 @@
             
             const [order, setOrder] = useState({
                 name: "", phone: "", location: "", date: "", 
-                type: "", quantity: "", details: "", timestamp: "", photo: "" // Photo ستبقى فارغة كما طلبت
+                type: "", quantity: "", details: "", timestamp: "", photo: ""
             });
 
             const [step, setStep] = useState(1);
@@ -66,19 +67,33 @@
                 if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
             }, [messages]);
 
-            const saveData = async (finalData) => {
+            const submitToSheet = async (finalData) => {
                 setIsLoading(true);
                 try {
+                    // ضمان إرسال كائن واحد يحتوي على كل البيانات لملء صف واحد كامل
                     const response = await fetch(API_URL, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ data: [finalData] })
+                        body: JSON.stringify({ 
+                            data: [{
+                                name: finalData.name,
+                                phone: finalData.phone,
+                                location: finalData.location,
+                                date: finalData.date,
+                                type: finalData.type,
+                                quantity: finalData.quantity,
+                                details: finalData.details,
+                                timestamp: new Date().toLocaleString('ar-YE'),
+                                photo: "" // فارغ بناءً على طلبك لإلغاء التصوير
+                            }] 
+                        })
                     });
+                    
                     if(response.ok) {
-                        setMessages(prev => [...prev, { role: 'bot', text: "شكراً جزيلاً لسيادتكم.\nتم تسجيل كافة البيانات في نظامنا بنجاح.\nسيتواصل معكم مختص التنسيق خلال دقائق." }]);
+                        setMessages(prev => [...prev, { role: 'bot', text: "تم تسجيل كافة بياناتكم بنجاح في سجلاتنا.\nسيقوم فريق التنسيق بمراجعة الطلب والتواصل معكم فوراً.\n\nشكراً لثقتكم بمطاعم الكورنيش." }]);
                     } else { throw new Error(); }
                 } catch (e) {
-                    setMessages(prev => [...prev, { role: 'bot', text: "عذراً، حدث خطأ أثناء الحفظ التلقائي، سيتم التواصل معكم عبر الرقم المسجل لمتابعة الطلب." }]);
+                    setMessages(prev => [...prev, { role: 'bot', text: "تم استلام طلبكم، وسنقوم بالتواصل معكم هاتفياً لتأكيد التفاصيل النهائية." }]);
                 }
                 setIsLoading(false);
                 setStep(100);
@@ -91,88 +106,90 @@
                 setMessages(prev => [...prev, { role: 'user', text }]);
                 setInput("");
 
+                // معالجة الخطوات بشكل مستقل لضمان ملء كل حقل
                 setTimeout(() => {
-                    processStep(text);
-                }, 500);
-            };
+                    let botText = "";
+                    let nextStep = step;
+                    let updatedOrder = { ...order };
 
-            const processStep = (val) => {
-                let botText = "";
-                let nextStep = step;
-                let currentOrder = { ...order };
+                    switch(step) {
+                        case 1: // الاسم
+                            if(text.split(" ").length < 2) {
+                                botText = "نرجو تزويدنا بالاسم الثنائي الموقر للمتابعة؟";
+                            } else {
+                                updatedOrder.name = text;
+                                botText = "تشرفنا بك. يرجى تزويدنا برقم الهاتف المعتمد لسيادتكم؟";
+                                nextStep = 2;
+                            }
+                            break;
+                        case 2: // الهاتف
+                            if(!/^\d{7,}$/.test(text.replace(/\s/g, ""))) {
+                                botText = "يرجى كتابة رقم هاتف صحيح لنتمكن من التواصل معكم؟";
+                            } else {
+                                updatedOrder.phone = text;
+                                botText = "نرجو تحديد موقع المناسبة بدقة (3 أركان: المدينة - الحي - الشارع/المعلم)؟\nمثال: المكلا - الشرج - مقابل البسيري";
+                                nextStep = 3;
+                            }
+                            break;
+                        case 3: // الموقع (شرط الأركان الثلاثة)
+                            const locationParts = text.split(/[-ـ\s\.]+/).filter(p => p.length > 1);
+                            if(locationParts.length < 3) {
+                                botText = "عذراً، يجب وصف الموقع بـ 3 أركان على الأقل (مثال: المكلا - الشرج - بجانب مدرسة...) لضمان دقة الوصول؟";
+                            } else {
+                                updatedOrder.location = text;
+                                botText = "هل الطلب خاص بمناسبة (زواج، اجتماع، عقد تغذية) أم طلب شخصي؟";
+                                nextStep = 4;
+                            }
+                            break;
+                        case 4: // النوع
+                            if(text.includes("شخصي") || text.includes("فردي")) {
+                                botText = "عذراً سيد " + updatedOrder.name + "، هذا القسم مخصص للمناسبات الكبرى فقط. للطلبات الشخصية يرجى استخدام تطبيق (لبيه).\nhttps://labbayh.com";
+                                setMessages(prev => [...prev, { role: 'bot', text: botText }]);
+                                setStep(100);
+                                return;
+                            } else {
+                                updatedOrder.type = text;
+                                botText = "تفضل بوصف الأصناف المطلوبة لمناسبتكم الموقرة؟";
+                                nextStep = 5;
+                            }
+                            break;
+                        case 5: // التفاصيل
+                            updatedOrder.details = text;
+                            botText = "ما هي الكمية الإجمالية التقديرية (عدد الوجبات أو المعازيم)؟";
+                            nextStep = 6;
+                        break;
+                        case 6: // الكمية
+                            updatedOrder.quantity = text;
+                            botText = "يرجى تحديد تاريخ المناسبة.\nنرجو كتابته بهذا الشكل: 20/10/2026";
+                            nextStep = 7;
+                        break;
+                        case 7: // التاريخ النهائي
+                            // فحص بسيط لشكل التاريخ
+                            if(!text.includes("/")) {
+                                botText = "يرجى كتابة التاريخ بشكل صحيح مثل النموذج: 20/10/2026";
+                            } else {
+                                updatedOrder.date = text;
+                                setOrder(updatedOrder);
+                                submitToSheet(updatedOrder);
+                                return;
+                            }
+                        break;
+                    }
 
-                switch(step) {
-                    case 1: // الاسم
-                        if(val.split(" ").length < 2) {
-                            botText = "نرجو كتابة الاسم الثنائي الموقر (مثال: محمد الحضرمي)؟";
-                        } else {
-                            currentOrder.name = val;
-                            botText = "أهلاً بك. يرجى تزويدنا برقم التواصل المباشر؟";
-                            nextStep = 2;
-                        }
-                        break;
-                    case 2: // الهاتف
-                        if(!/^\d{7,}$/.test(val.replace(/\s/g, ""))) {
-                            botText = "يرجى إدخال رقم هاتف صحيح (7 أرقام على الأقل)؟";
-                        } else {
-                            currentOrder.phone = val;
-                            botText = "نرجو تحديد موقع المناسبة بدقة (مثال: المكلا - الشرج - مقابل البسيري)؟";
-                            nextStep = 3;
-                        }
-                        break;
-                    case 3: // الموقع (شرط الـ 3 أجزاء)
-                        const parts = val.split(/[-ـ\s]+/).filter(p => p.length > 1);
-                        if(parts.length < 3) {
-                            botText = "عذراً، يجب وصف الموقع بدقة (المدينة، الحي، ومعلم بارز أو شارع) لضمان الوصول؟";
-                        } else {
-                            currentOrder.location = val;
-                            botText = "هل الطلب خاص بمناسبة كبرى/عقد تغذية مستدام، أم هو طلب شخصي فردي؟";
-                            nextStep = 4;
-                        }
-                        break;
-                    case 4: // النوع
-                        if(val.includes("شخصي") || val.includes("فردي") || val.includes("نفسي")) {
-                            botText = "نعتذر، هذا القسم حصري للمناسبات والعقود. للطلبات الفردية يرجى استخدام تطبيق (لبيه).\nhttps://labbayh.com";
-                            setMessages(prev => [...prev, { role: 'bot', text: botText }]);
-                            setStep(100);
-                            return;
-                        } else {
-                            currentOrder.type = val;
-                            botText = "نتشرف بخدمتكم. تفضل بوصف الأصناف المطلوبة (مثال: لحم مندي، بروست، سلاطات)؟";
-                            nextStep = 5;
-                        }
-                        break;
-                    case 5: // التفاصيل
-                        currentOrder.details = val;
-                        botText = "ما هي الكمية الإجمالية التقديرية (عدد الوجبات أو الأشخاص)؟";
-                        nextStep = 6;
-                        break;
-                    case 6: // الكمية
-                        currentOrder.quantity = val;
-                        botText = "أخيراً، نرجو تحديد تاريخ وموعد المناسبة المطلوب؟";
-                        nextStep = 7;
-                        break;
-                    case 7: // التاريخ والإرسال
-                        currentOrder.date = val;
-                        currentOrder.timestamp = new Date().toLocaleString('ar-YE');
-                        setOrder(currentOrder);
-                        saveData(currentOrder);
-                        return;
-                }
-
-                setOrder(currentOrder);
-                setStep(nextStep);
-                if(botText) {
-                    setMessages(prev => [...prev, { role: 'bot', text: botText }]);
-                }
+                    setOrder(updatedOrder);
+                    setStep(nextStep);
+                    if(botText) {
+                        setMessages(prev => [...prev, { role: 'bot', text: botText }]);
+                    }
+                }, 400);
             };
 
             return (
                 <div className="app-container">
                     {isLoading && (
-                        <div className="loading-overlay">
-                            <div className="loader"></div>
-                            <p className="mt-2 text-sm text-blue-900 font-bold">جاري حفظ البيانات...</p>
+                        <div className="status-overlay">
+                            <div className="spinner"></div>
+                            <p className="mt-4 text-blue-900 font-bold">جاري تأمين وحفظ البيانات...</p>
                         </div>
                     )}
                     
@@ -187,7 +204,7 @@
                                 {m.text.split('\n').map((line, j) => (
                                     <p key={j} className="mb-1">
                                         {line.includes('http') ? 
-                                            <a href="https://labbayh.com" target="_blank" className="text-white underline font-bold">الرابط المباشر هنا</a> 
+                                            <a href="https://labbayh.com" target="_blank" className="text-white underline font-bold">رابط تطبيق لبيه</a> 
                                             : line}
                                     </p>
                                 ))}
@@ -200,7 +217,7 @@
                             <div className="input-wrap">
                                 <textarea 
                                     rows="1" 
-                                    placeholder="اكتب رد سيادتكم..." 
+                                    placeholder="اكتب ردكم هنا..." 
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={(e) => {
