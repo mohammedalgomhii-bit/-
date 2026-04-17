@@ -3,60 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مطاعم الكورنيش - خدمة VIP</title>
+    <title>مطاعم الكورنيش - نظام VIP المطور</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --pure-white: #FFFFFF;
-            --soft-gray: #F8FAFC;
-            --brand-orange: #FF782D;
-            --brand-blue: #0056D2;
-            --text-main: #1E293B;
-        }
-        body { 
-            font-family: 'Tajawal', sans-serif; 
-            background: linear-gradient(135deg, #F0F4F8 0%, #FFFFFF 100%);
-            height: 100vh; margin: 0; 
-        }
-        .main-card {
-            background: var(--pure-white);
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0, 86, 210, 0.05);
-            border: 1px solid rgba(0, 86, 210, 0.1);
-        }
-        .header-gradient {
-            background: white;
-            border-bottom: 3px solid var(--soft-gray);
-            position: relative;
-        }
-        .header-gradient::after {
-            content: ''; position: absolute; bottom: -3px; left: 0; width: 40%; height: 3px; background: var(--brand-orange);
-        }
-        .header-gradient::before {
-            content: ''; position: absolute; bottom: -3px; right: 0; width: 60%; height: 3px; background: var(--brand-blue);
-        }
-        .bot-msg {
-            background: white;
-            border-right: 4px solid var(--brand-blue);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        }
-        .user-msg {
-            background: linear-gradient(135deg, var(--brand-blue) 0%, #003B91 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(0, 86, 210, 0.2);
-        }
-        .input-area {
-            border-top: 1px solid #EDF2F7;
-            background: #FFFFFF;
-        }
-        .orange-btn {
-            background: var(--brand-orange);
-            box-shadow: 0 4px 14px rgba(255, 120, 45, 0.3);
-        }
+        :root { --p-white: #FFFFFF; --s-gray: #F1F5F9; --b-orange: #FF782D; --b-blue: #0056D2; }
+        body { font-family: 'Tajawal', sans-serif; background: #F8FAFC; height: 100vh; margin: 0; }
+        .main-card { background: var(--p-white); border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #E2E8F0; }
+        .header-ui { background: white; border-bottom: 2px solid var(--s-gray); position: relative; }
+        .header-ui::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 35%; height: 2px; background: var(--b-orange); }
+        .header-ui::before { content: ''; position: absolute; bottom: -2px; right: 0; width: 65%; height: 2px; background: var(--b-blue); }
+        .bot-msg { background: white; border-right: 4px solid var(--b-blue); shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .user-msg { background: var(--b-blue); color: white; shadow: 0 4px 12px rgba(0, 86, 210, 0.15); }
+        .orange-send { background: var(--b-orange); transition: all 0.2s; }
+        .orange-send:hover { transform: scale(1.05); opacity: 0.9; }
     </style>
 </head>
 <body>
@@ -65,114 +28,124 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        function CornicheChat() {
+        function CornicheVIPApp() {
             const [input, setInput] = useState("");
             const [step, setStep] = useState("welcome");
-            const [data, setData] = useState({});
+            const [data, setData] = useState({ name: "", phone: "", type: "", details: "", quantity: "", date: "" });
             const [messages, setMessages] = useState([
-                { role: 'bot', text: 'مرحباً بك في مطاعم الكورنيش السياحية.\nيرجى تسجيل اسمك الثنائي أو اسم المؤسسة (شركة - مستشفى - مدرسة - جمعية) للمتابعة:' }
+                { role: 'bot', text: 'مرحباً بك في مطاعم الكورنيش السياحية.\nيرجى تسجيل اسمك الثنائي أو اسم المؤسسة للمتابعة:' }
             ]);
             const scrollRef = useRef(null);
 
             useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
+            const addMsg = (role, text) => setMessages(prev => [...prev, { role, text }]);
+
             const handleSend = async () => {
                 const val = input.trim();
-                if (!val) return;
+                if (!val && step !== "details") return;
 
-                setMessages(prev => [...prev, { role: 'user', text: val }]);
+                addMsg('user', val);
                 setInput("");
 
                 let nextReply = "";
                 
                 if (step === "welcome") {
-                    const isDouble = val.split(" ").length >= 2;
+                    const isDouble = val.split(/\s+/).length >= 2;
                     const isOrg = ["شركة", "مستشفى", "مدرسة", "جمعية", "مؤسسة"].some(o => val.includes(o));
-                    
                     if (isDouble || isOrg) {
-                        setData({...data, name: val});
-                        nextReply = "شكراً لك. يرجى إدخال رقم هاتفك (يجب أن يتكون من 9 أرقام ويبدأ بـ 77 أو 78 أو 73):";
+                        setData(prev => ({ ...prev, name: val }));
+                        nextReply = "شكراً لك. يرجى إدخال رقم هاتفك (9 أرقام يبدأ بـ 77، 78، أو 73):";
                         setStep("phone");
                     } else {
-                        nextReply = "نعتذر منك، يجب كتابة الاسم الثنائي أو اسم المؤسسة لنتمكن من خدمتك:";
+                        nextReply = "يرجى كتابة الاسم الثنائي أو اسم الجهة بشكل صحيح:";
                     }
                 } 
                 
                 else if (step === "phone") {
-                    const isValid = /^(77|78|73)\d{7}$/.test(val);
-                    if (isValid) {
-                        setData({...data, phone: val});
+                    if (/^(77|78|73)\d{7}$/.test(val)) {
+                        setData(prev => ({ ...prev, phone: val }));
                         nextReply = "هل طلبك بخصوص:\n1. مناسبة\n2. طلب عقد تغذية\n3. طلب شخصي";
                         setStep("type");
                     } else {
-                        nextReply = "عذراً، الرقم غير صحيح. اكتب الرقم الذي يبدأ بـ 77 - 78 - 73 ومكون من 9 أرقام:";
+                        nextReply = "الرقم غير صحيح. يجب أن يبدأ بـ 77 - 78 - 73 ومكون من 9 أرقام:";
                     }
                 }
 
                 else if (step === "type") {
-                    if (val.includes("شخصي")) {
-                        nextReply = "للطلبات الشخصية، يرجى التوجه لتطبيق لبيه عبر الرابط:\nhttps://play.google.com/store/apps/details?id=com.techsoft.daily_dish_app";
+                    if (val.includes("شخصي") || val === "3") {
+                        nextReply = "للطلبات الشخصية، يرجى التوجه لتطبيق لبيه:\nhttps://play.google.com/store/apps/details?id=com.techsoft.daily_dish_app";
                         setStep("welcome");
-                    } else if (val.includes("مناسبة") || val.includes("تغذية")) {
-                        setData({...data, type: val});
-                        nextReply = "يرجى تزويدنا بالتفاصيل التالية:\nالوجبات:\nالمشروبات:\nالسلطات:\nالتحلية:\nملاحظات:";
-                        setStep("details");
                     } else {
-                        nextReply = "يرجى اختيار (مناسبة / عقد تغذية / شخصي):";
+                        setData(prev => ({ ...prev, type: val }));
+                        nextReply = "يرجى تزويدنا بالتفاصيل:\nالوجبات:\nالمشروبات:\nالسلطات:\nالتحلية:\nملاحظات:";
+                        setStep("details");
                     }
                 }
 
                 else if (step === "details") {
-                    setData({...data, details: val});
+                    setData(prev => ({ ...prev, details: val }));
+                    nextReply = "يرجى تحديد الكمية المطلوبة (عدد الأشخاص أو الوجبات):";
+                    setStep("quantity");
+                }
+
+                else if (step === "quantity") {
+                    setData(prev => ({ ...prev, quantity: val }));
                     nextReply = "أخيراً، يرجى تحديد موعد المناسبة (مثال: 10/7/2026):";
                     setStep("date");
                 }
 
                 else if (step === "date") {
-                    const finalData = {...data, date: val};
-                    nextReply = "جاري حفظ طلبك في سجلاتنا الـ VIP... ✨";
+                    const finalDate = val;
+                    addMsg('bot', "جاري حفظ طلبك الـ VIP في السجلات... ✨");
                     
-                    // إرسال البيانات إلى SheetDB
                     try {
+                        const payload = {
+                            data: [{
+                                name: data.name,
+                                phone: data.phone,
+                                type: data.type,
+                                details: data.details,
+                                quantity: data.quantity,
+                                date: finalDate,
+                                timestamp: new Date().toLocaleString('ar-EG')
+                            }]
+                        };
+                        
                         await fetch("https://sheetdb.io/api/v1/8ku63b4j58gja", {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                data: [{
-                                    name: finalData.name,
-                                    phone: finalData.phone,
-                                    date: finalData.date,
-                                    type: finalData.type,
-                                    details: finalData.details,
-                                    timestamp: new Date().toLocaleString('ar-EG')
-                                }]
-                            })
+                            body: JSON.stringify(payload)
                         });
                         nextReply = "✅ تم تسجيل طلبك بنجاح. مطاعم الكورنيش تتمنى لكم يوماً سعيداً!";
                     } catch (e) {
-                        nextReply = "تم استلام الطلب، وسنتواصل معك قريباً.";
+                        nextReply = "تم استلام الطلب بنجاح، وسنتواصل معكم قريباً.";
                     }
                     setStep("welcome");
                 }
 
-                setTimeout(() => {
-                    setMessages(prev => [...prev, { role: 'bot', text: nextReply }]);
-                }, 600);
+                setTimeout(() => addMsg('bot', nextReply), 600);
+            };
+
+            // وظيفة منع الإرسال عند ضغط Enter والسماح بسطر جديد
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    // هنا تركنا السلوك الافتراضي لـ textarea وهو السطر الجديد
+                }
             };
 
             return (
-                <div className="max-w-xl mx-auto h-screen flex flex-col p-4 md:p-8">
+                <div className="max-w-xl mx-auto h-screen flex flex-col p-4">
                     <div className="main-card flex-1 flex flex-col overflow-hidden">
-                        
-                        <header className="header-gradient p-6">
-                            <h1 className="text-2xl font-bold text-slate-800">مطاعم الكورنيش السياحية</h1>
-                            <p className="text-blue-600 font-medium text-sm">الرد الآلي لخدمة العملاء VIP</p>
+                        <header className="header-ui p-6 text-center md:text-right">
+                            <h1 className="text-xl font-bold text-slate-800">مطاعم الكورنيش السياحية</h1>
+                            <p className="text-blue-600 text-xs font-bold mt-1">الرد الآلي لخدمة العملاء VIP</p>
                         </header>
 
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50">
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#FDFDFD]">
                             {messages.map((m, i) => (
                                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`p-4 rounded-2xl max-w-[90%] whitespace-pre-line text-sm leading-relaxed shadow-sm ${
+                                    <div className={`p-4 rounded-2xl max-w-[85%] whitespace-pre-line text-sm shadow-sm ${
                                         m.role === 'user' ? 'user-msg' : 'bot-msg text-slate-700'
                                     }`}>
                                         {m.text}
@@ -182,22 +155,19 @@
                             <div ref={scrollRef} />
                         </div>
 
-                        <div className="input-area p-6">
-                            <div className="flex gap-2">
-                                <input 
-                                    className="flex-1 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all text-sm"
-                                    placeholder="اكتب رسالتك..."
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                                />
-                                <button 
-                                    onClick={handleSend}
-                                    className="orange-btn text-white px-6 py-3 rounded-xl font-bold hover:scale-105 active:scale-95 transition-all"
-                                >
-                                    إرسال
-                                </button>
-                            </div>
+                        <div className="p-4 bg-white border-t border-slate-100 flex flex-col gap-3">
+                            <textarea 
+                                className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:border-blue-500 transition-all text-sm resize-none h-20"
+                                placeholder="اكتب رسالتك هنا... (اضغط Enter لسطر جديد)"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                            />
+                            <button 
+                                onClick={handleSend}
+                                className="orange-send text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-orange-200"
+                            >
+                                إرسال الطلب الآن ➤
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -205,7 +175,7 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<CornicheChat />);
+        root.render(<CornicheVIPApp />);
     </script>
 </body>
 </html>
