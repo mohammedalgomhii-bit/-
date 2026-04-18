@@ -4,37 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>مطاعم الكورنيش VIP - نظام التنسيق</title>
+    <!-- React و Babel -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- خط Tajawal -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         :root {
             --primary-blue: #0056b3;
             --primary-orange: #ff7f27;
-            --success-green: #10b981;
-            --error-red: #ef4444;
-            --bg-light: #f8fafc;
-            --text-dark: #1e293b;
-            --text-light: #64748b;
-            --border-light: #e2e8f0;
         }
-        
         body { 
             font-family: 'Tajawal', sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #f8f9fa; 
             margin: 0; 
             height: 100vh; 
-            overflow: hidden;
+            overflow: hidden; 
         }
+        /* إخفاء شريط التمرير للسماحة بتصميم أنظف */
+        .chat-area::-webkit-scrollbar { width: 6px; }
+        .chat-area::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
         
+        /* رسائل المستخدم والبوت */
+        .msg { 
+            max-width: 85%; 
+            padding: 12px 16px; 
+            border-radius: 18px; 
+            font-size: 14px; 
+            line-height: 1.6; 
+            animation: slideIn 0.3s ease-out; 
+            word-wrap: break-word;
+        }
+        @keyframes slideIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        .bot-msg { 
+            align-self: flex-start; 
+            background: #f1f5f9; 
+            color: #1e293b; 
+            border-bottom-right-radius: 2px; 
+            border-right: 4px solid var(--primary-blue); 
+        }
+        .user-msg { 
+            align-self: flex-end; 
+            background: var(--primary-blue); 
+            color: white; 
+            border-bottom-left-radius: 2px; 
+        }
+
+        /* حاوية التطبيق للجوال */
         .app-container { 
             height: 100dvh; 
             display: flex; 
@@ -43,308 +66,42 @@
             margin: 0 auto; 
             background: #ffffff; 
             position: relative; 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            border-radius: 0;
-            overflow: hidden;
-        }
-        
-        @media (min-width: 501px) {
-            .app-container {
-                height: 90dvh;
-                margin: 5dvh auto;
-                border-radius: 24px;
-            }
-        }
-        
-        .header { 
-            background: linear-gradient(to bottom, #ffffff, #f8fafc);
-            padding: 20px 15px; 
-            text-align: center; 
-            border-bottom: 3px solid var(--primary-orange); 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            position: relative;
-        }
-        
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary-blue), var(--primary-orange), var(--primary-blue));
-        }
-        
-        .brand-name { 
-            color: var(--primary-blue); 
-            font-weight: 800; 
-            font-size: 1.6rem;
-            text-shadow: 2px 2px 4px rgba(0, 86, 179, 0.1);
-            letter-spacing: -0.5px;
-        }
-        
-        .brand-subtitle { 
-            color: var(--primary-orange); 
-            font-size: 0.9rem; 
-            font-weight: 700; 
-            margin-top: 6px; 
-            letter-spacing: 2px;
-            display: inline-block;
-            padding: 4px 12px;
-            background: rgba(255, 127, 39, 0.1);
-            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.1); 
         }
 
-        .chat-area { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 20px 15px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 16px; 
-            background: linear-gradient(to bottom, #f8fafc, #ffffff);
-            scroll-behavior: smooth;
-        }
-        
-        .chat-area::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .chat-area::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 10px;
-        }
-        
-        .chat-area::-webkit-scrollbar-thumb {
-            background: var(--primary-blue);
-            border-radius: 10px;
-            opacity: 0.5;
-        }
-        
-        .msg { 
-            max-width: 85%; 
-            padding: 14px 18px; 
-            border-radius: 20px; 
-            font-size: 14.5px; 
-            line-height: 1.7; 
-            animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            word-wrap: break-word;
-            position: relative;
-        }
-        
-        @keyframes slideIn { 
-            from { 
-                opacity: 0; 
-                transform: translateY(20px) scale(0.95); 
-            } 
-            to { 
-                opacity: 1; 
-                transform: translateY(0) scale(1); 
-            } 
-        }
-        
-        .bot-msg { 
-            align-self: flex-start; 
-            background: #ffffff; 
-            color: var(--text-dark); 
-            border-bottom-right-radius: 4px; 
-            border-right: 4px solid var(--primary-blue);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            border: 1px solid var(--border-light);
-            border-right-width: 4px;
-        }
-        
-        .user-msg { 
-            align-self: flex-end; 
-            background: linear-gradient(135deg, var(--primary-blue), #003d82);
-            color: white; 
-            border-bottom-left-radius: 4px;
-            box-shadow: 0 4px 12px rgba(0, 86, 179, 0.3);
-        }
-
-        .input-area { 
-            padding: 16px; 
-            border-top: 2px solid var(--border-light); 
-            background: white; 
-            padding-bottom: max(16px, env(safe-area-inset-bottom));
-        }
-        
-        .input-wrap { 
-            display: flex; 
-            align-items: flex-end; 
-            background: var(--bg-light); 
-            border-radius: 30px; 
-            padding: 6px 8px 6px 20px; 
-            border: 2px solid transparent; 
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-        
-        .input-wrap:focus-within { 
-            border-color: var(--primary-blue); 
-            background: white; 
-            box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1);
-            transform: translateY(-2px);
-        }
-        
-        textarea { 
-            flex: 1; 
-            background: transparent; 
-            border: none; 
-            outline: none; 
-            padding: 10px 0; 
-            font-size: 15px; 
-            resize: none; 
-            max-height: 120px; 
-            font-family: inherit; 
-            color: var(--text-dark);
-            line-height: 1.5;
-        }
-        
-        textarea::placeholder {
-            color: var(--text-light);
-            font-weight: 400;
-        }
-        
-        .send-btn { 
-            color: var(--primary-blue); 
-            cursor: pointer; 
-            padding: 10px; 
-            transition: all 0.3s ease;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 86, 179, 0.1);
-            margin-right: 4px;
-        }
-        
-        .send-btn:hover {
-            background: var(--primary-blue);
-            color: white;
-            transform: scale(1.05);
-        }
-        
-        .send-btn:active { 
-            transform: scale(0.95); 
-        }
-
-        .status-overlay { 
-            position: absolute; 
-            inset: 0; 
-            background: rgba(255, 255, 255, 0.98); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            z-index: 100; 
-            flex-direction: column; 
-            text-align: center; 
-            padding: 20px;
-            backdrop-filter: blur(8px);
-            animation: fadeIn 0.3s ease;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .spinner { 
-            width: 45px; 
-            height: 45px; 
-            border: 4px solid var(--border-light); 
-            border-top: 4px solid var(--primary-orange); 
-            border-right: 4px solid var(--primary-blue);
-            border-radius: 50%; 
-            animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
-        }
-        
-        .typing-indicator {
-            display: flex;
-            gap: 4px;
-            padding: 14px 18px;
-            background: #ffffff;
-            border-radius: 20px;
-            border-bottom-right-radius: 4px;
-            border-right: 4px solid var(--primary-blue);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            align-self: flex-start;
-        }
-        
-        .typing-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--text-light);
-            animation: typing 1.4s infinite;
-        }
-        
-        .typing-dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-        
-        .typing-dot:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-        
-        @keyframes typing {
-            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-            30% { transform: translateY(-10px); opacity: 1; }
-        }
-        
-        .progress-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary-blue), var(--primary-orange));
-            animation: progress 2s ease-in-out infinite;
-        }
-        
-        @keyframes progress {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        
-        .link-highlight {
-            color: white;
-            text-decoration: none;
-            font-weight: 700;
-            padding: 2px 8px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            display: inline-block;
-            transition: all 0.3s ease;
-        }
-        
-        .link-highlight:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
+        /* حركة البوتون */
+        .send-btn:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback } = React;
+        const { useState, useEffect, useRef } = React;
+
+        // مكون الرسالة المنفصل لتحسين الأداء
+        const Message = ({ role, text }) => (
+            <div className={`msg ${role === 'bot' ? 'bot-msg' : 'user-msg'}`}>
+                {text.split('\n').map((line, j) => (
+                    <p key={j} className="mb-1 last:mb-0">
+                        {line.includes('http') ? (
+                            <a href="https://labbayh.com" target="_blank" rel="noreferrer" className="text-white underline font-bold">
+                                رابط تطبيق لبيه
+                            </a>
+                        ) : line}
+                    </p>
+                ))}
+            </div>
+        );
 
         const App = () => {
             const API_URL = "https://sheetdb.io/api/v1/8ku63b4j58gja";
             
+            // حالة الرسائل الأولية
             const [messages, setMessages] = useState([
-                { 
-                    role: 'bot', 
-                    text: "مرحباً بكم في وحدة كبار العملاء (VIP) بمطاعم الكورنيش السياحية.\nنتشرف بخدمتكم لتنسيق أرقى المناسبات وعقود التغذية.\n\nتفضل بتزويدنا بالاسم الثنائي لسيادتكم؟" 
-                }
+                { role: 'bot', text: "مرحباً بكم في وحدة كبار العملاء (VIP) بمطاعم الكورنيش السياحية.\nنتشرف بخدمتكم لتنسيق أرقى المناسبات وعقود التغذية.\n\nتفضل بتزويدنا بالاسم الثنائي لسيادتكم؟" }
             ]);
             
+            // كائن الطلب (تم إزالة حقل الصورة)
             const [order, setOrder] = useState({
                 name: "", phone: "", location: "", date: "", 
                 type: "", quantity: "", details: "", timestamp: ""
@@ -353,122 +110,195 @@
             const [step, setStep] = useState(1);
             const [input, setInput] = useState("");
             const [isLoading, setIsLoading] = useState(false);
-            const [isTyping, setIsTyping] = useState(false);
             const chatRef = useRef(null);
-            const inputRef = useRef(null);
+            const textareaRef = useRef(null);
 
+            // تمرير تلقائي للأسفل عند وجود رسائل جديدة
             useEffect(() => { 
                 if (chatRef.current) {
-                    chatRef.current.scrollTo({
-                        top: chatRef.current.scrollHeight,
-                        behavior: 'smooth'
-                    });
+                    chatRef.current.scrollTop = chatRef.current.scrollHeight;
                 }
             }, [messages]);
 
+            // توسيع النص تلقائياً
             useEffect(() => {
-                if (!isLoading && inputRef.current && step !== 100) {
-                    inputRef.current.focus();
+                if (textareaRef.current) {
+                    textareaRef.current.style.height = 'auto';
+                    textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 100) + 'px';
                 }
-            }, [isLoading, step]);
-
-            const validatePhone = (phone) => {
-                const cleanPhone = phone.replace(/\s/g, "");
-                return /^(\+?966|0)?[0-9]{9,10}$/.test(cleanPhone) || /^\d{7,}$/.test(cleanPhone);
-            };
-
-            const validateDate = (date) => {
-                const datePattern = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
-                if (!datePattern.test(date)) return false;
-                
-                const [day, month, year] = date.split('/').map(Number);
-                const inputDate = new Date(year, month - 1, day);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                
-                return inputDate >= today && 
-                       inputDate.getDate() === day && 
-                       inputDate.getMonth() === month - 1 && 
-                       inputDate.getFullYear() === year;
-            };
+            }, [input]);
 
             const submitToSheet = async (finalData) => {
                 setIsLoading(true);
                 try {
                     const response = await fetch(API_URL, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
+                        headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ 
                             data: [{
-                                name: finalData.name.trim(),
-                                phone: finalData.phone.trim(),
-                                location: finalData.location.trim(),
-                                date: finalData.date.trim(),
-                                type: finalData.type.trim(),
-                                quantity: finalData.quantity.trim(),
-                                details: finalData.details.trim(),
-                                timestamp: new Date().toLocaleString('ar-SA', { 
-                                    timeZone: 'Asia/Riyadh',
-                                    hour12: false 
-                                })
+                                name: finalData.name,
+                                phone: finalData.phone,
+                                location: finalData.location,
+                                date: finalData.date,
+                                type: finalData.type,
+                                quantity: finalData.quantity,
+                                details: finalData.details,
+                                timestamp: new Date().toLocaleString('ar-YE')
+                                // تم إزالة حقل الصورة تماماً
                             }] 
                         })
                     });
                     
                     if(response.ok) {
-                        setMessages(prev => [...prev, { 
-                            role: 'bot', 
-                            text: "✅ تم تسجيل كافة بياناتكم بنجاح في سجلاتنا.\n\n📞 سيقوم فريق التنسيق بالتواصل معكم خلال 24 ساعة.\n\n🙏 شكراً لثقتكم بمطاعم الكورنيش." 
-                        }]);
-                    } else {
-                        throw new Error('فشل في حفظ البيانات');
-                    }
+                        setMessages(prev => [...prev, { role: 'bot', text: "تم تسجيل كافة بياناتكم بنجاح في سجلاتنا.\nسيقوم فريق التنسيق بمراجعة الطلب والتواصل معكم فوراً.\n\nشكراً لثقتكم بمطاعم الكورنيش." }]);
+                    } else { throw new Error(); }
                 } catch (e) {
-                    console.error('خطأ في الإرسال:', e);
-                    setMessages(prev => [...prev, { 
-                        role: 'bot', 
-                        text: "⚠️ تم استلام طلبكم، وسنقوم بالتواصل معكم هاتفياً خلال 24 ساعة لتأكيد التفاصيل.\n\nنعتذر عن أي إزعاج." 
-                    }]);
-                } finally {
-                    setIsLoading(false);
-                    setStep(100);
+                    setMessages(prev => [...prev, { role: 'bot', text: "تم استلام طلبكم، وسنقوم بالتواصل معكم هاتفياً لتأكيد التفاصيل النهائية." }]);
                 }
+                setIsLoading(false);
+                setStep(100);
             };
 
-            const processStep = useCallback((text) => {
-                let botText = "";
-                let nextStep = step;
-                let updatedOrder = { ...order };
-                let isValid = true;
+            const handleSend = () => {
+                const text = input.trim();
+                if (!text || isLoading) return;
 
-                switch(step) {
-                    case 1: // الاسم
-                        const nameParts = text.trim().split(/\s+/);
-                        if(nameParts.length < 2) {
-                            botText = "❌ نرجو تزويدنا بالاسم الثنائي الموقر (الاسم الأول واسم العائلة) للمتابعة؟";
-                            isValid = false;
-                        } else if (nameParts.some(part => part.length < 2)) {
-                            botText = "❌ يرجى كتابة الاسم بشكل صحيح (كل جزء يجب أن يكون حرفين على الأقل)";
-                            isValid = false;
-                        } else {
-                            updatedOrder.name = text.trim();
-                            botText = "✅ تشرفنا بك.\n\n📱 يرجى تزويدنا برقم الهاتف المعتمد لسيادتكم؟";
-                            nextStep = 2;
-                        }
+                setMessages(prev => [...prev, { role: 'user', text }]);
+                setInput("");
+
+                setTimeout(() => {
+                    let botText = "";
+                    let nextStep = step;
+                    let updatedOrder = { ...order };
+
+                    switch(step) {
+                        case 1: // الاسم
+                            if(text.split(" ").length < 2) {
+                                botText = "نرجو تزويدنا بالاسم الثنائي الموقر للمتابعة؟";
+                            } else {
+                                updatedOrder.name = text;
+                                botText = "تشرفنا بك. يرجى تزويدنا برقم الهاتف المعتمد لسيادتكم؟";
+                                nextStep = 2;
+                            }
+                            break;
+                        case 2: // الهاتف
+                            if(!/^\d{7,}$/.test(text.replace(/\s/g, ""))) {
+                                botText = "يرجى كتابة رقم هاتف صحيح لنتمكن من التواصل معكم؟";
+                            } else {
+                                updatedOrder.phone = text;
+                                botText = "نرجو تحديد موقع المناسبة بدقة (3 أركان: المدينة - الحي - الشارع/المعلم)؟\nمثال: المكلا - الشرج - مقابل البسيري";
+                                nextStep = 3;
+                            }
+                            break;
+                        case 3: // الموقع
+                            const locationParts = text.split(/[-ـ\s\.]+/).filter(p => p.length > 1);
+                            if(locationParts.length < 3) {
+                                botText = "عذراً، يجب وصف الموقع بـ 3 أركان على الأقل (مثال: المكلا - الشرج - بجانب مدرسة...) لضمان دقة الوصول؟";
+                            } else {
+                                updatedOrder.location = text;
+                                botText = "هل الطلب خاص بمناسبة (زواج، اجتماع، عقد تغذية) أم طلب شخصي؟";
+                                nextStep = 4;
+                            }
+                            break;
+                        case 4: // النوع
+                            if(text.includes("شخصي") || text.includes("فردي")) {
+                                botText = "عذراً سيد " + updatedOrder.name + "، هذا القسم مخصص للمناسبات الكبرى فقط. للطلبات الشخصية يرجى استخدام تطبيق (لبيه).\nhttps://labbayh.com";
+                                setMessages(prev => [...prev, { role: 'bot', text: botText }]);
+                                setStep(100);
+                                return;
+                            } else {
+                                updatedOrder.type = text;
+                                botText = "تفضل بوصف الأصناف المطلوبة لمناسبتكم الموقرة؟";
+                                nextStep = 5;
+                            }
+                            break;
+                        case 5: // التفاصيل
+                            updatedOrder.details = text;
+                            botText = "ما هي الكمية الإجمالية التقديرية (عدد الوجبات أو المعازيم)؟";
+                            nextStep = 6;
                         break;
-                        
-                    case 2: // الهاتف
-                        if(!validatePhone(text)) {
-                            botText = "❌ يرجى كتابة رقم هاتف صحيح (9-10 أرقام) لنتمكن من التواصل معكم؟";
-                            isValid = false;
-                        } else {
-                            updatedOrder.phone = text.trim();
-                            botText = "📍 نرجو تحديد موقع المناسبة بدقة:\n\nالمدينة - الحي - أقرب معلم بارز\n\nمثال: المكلا - الشرج - مقابل البسيري";
-                            nextStep = 3;
-                        }
+                        case 6: // الكمية
+                            updatedOrder.quantity = text;
+                            botText = "يرجى تحديد تاريخ المناسبة.\nنرجو كتابته بهذا الشكل: 20/10/2026";
+                            nextStep = 7;
                         break;
-                        
-                    case 3
+                        case 7: // التاريخ النهائي
+                            if(!text.includes("/")) {
+                                botText = "يرجى كتابة التاريخ بشكل صحيح مثل النموذج: 20/10/2026";
+                            } else {
+                                updatedOrder.date = text;
+                                setOrder(updatedOrder);
+                                submitToSheet(updatedOrder);
+                                return;
+                            }
+                        break;
+                    }
+
+                    setOrder(updatedOrder);
+                    setStep(nextStep);
+                    if(botText) {
+                        setMessages(prev => [...prev, { role: 'bot', text: botText }]);
+                    }
+                }, 400);
+            };
+
+            return (
+                <div className="app-container">
+                    {/* شاشة التحميل */}
+                    {isLoading && (
+                        <div className="absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center text-center p-5">
+                            <div className="w-9 h-9 border-4 border-slate-200 border-t-[#ff7f27] rounded-full animate-spin"></div>
+                            <p className="mt-4 text-blue-900 font-bold">جاري تأمين وحفظ البيانات...</p>
+                        </div>
+                    )}
+                    
+                    {/* الهيدر */}
+                    <header className="bg-white p-5 text-center border-b-4 border-[#ff7f27] shadow-sm">
+                        <div className="text-[#0056b3] font-extrabold text-xl">مطاعم الكورنيش السياحية</div>
+                        <div className="text-[#ff7f27] text-xs font-bold mt-1 tracking-widest">وحدة كبار العملاء VIP</div>
+                    </header>
+
+                    {/* منطقة المحادثة */}
+                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-[#fdfdfd]" ref={chatRef}>
+                        {messages.map((m, i) => (
+                            <Message key={i} role={m.role} text={m.text} />
+                        ))}
+                    </div>
+
+                    {/* منطقة الإدخال */}
+                    {step !== 100 && (
+                        <div className="p-3 bg-white border-t border-gray-100 pb-[max(15px,env(safe-area-inset-bottom))]">
+                            <div className="flex items-center bg-[#f1f5f9] rounded-full px-4 py-1 border-2 border-transparent focus-within:border-[#0056b3] focus-within:bg-white transition-all shadow-sm">
+                                <textarea 
+                                    ref={textareaRef}
+                                    rows="1" 
+                                    placeholder="اكتب ردكم هنا..." 
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSend();
+                                        }
+                                    }}
+                                    className="flex-1 bg-transparent border-none outline-none p-2 text-[15px] text-slate-700 resize-none font-tajawal"
+                                />
+                                <div className="text-[#0056b3] cursor-pointer p-1.5 hover:opacity-80 transition-opacity" onClick={handleSend}>
+                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+```
