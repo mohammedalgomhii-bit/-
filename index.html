@@ -25,7 +25,7 @@
             height: 100vh; 
             overflow: hidden; 
         }
-        /* إخفاء شريط التمرير للسماحة بتصميم أنظف */
+        /* إخفاء شريط التمرير */
         .chat-area::-webkit-scrollbar { width: 6px; }
         .chat-area::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
         
@@ -68,9 +68,6 @@
             position: relative; 
             box-shadow: 0 0 40px rgba(0,0,0,0.1); 
         }
-
-        /* حركة البوتون */
-        .send-btn:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
@@ -78,7 +75,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // مكون الرسالة المنفصل لتحسين الأداء
+        // مكون الرسالة المنفصل
         const Message = ({ role, text }) => (
             <div className={`msg ${role === 'bot' ? 'bot-msg' : 'user-msg'}`}>
                 {text.split('\n').map((line, j) => (
@@ -101,7 +98,7 @@
                 { role: 'bot', text: "مرحباً بكم في وحدة كبار العملاء (VIP) بمطاعم الكورنيش السياحية.\nنتشرف بخدمتكم لتنسيق أرقى المناسبات وعقود التغذية.\n\nتفضل بتزويدنا بالاسم الثنائي لسيادتكم؟" }
             ]);
             
-            // كائن الطلب (تم إزالة حقل الصورة)
+            // كائن الطلب (بدون صورة)
             const [order, setOrder] = useState({
                 name: "", phone: "", location: "", date: "", 
                 type: "", quantity: "", details: "", timestamp: ""
@@ -113,7 +110,7 @@
             const chatRef = useRef(null);
             const textareaRef = useRef(null);
 
-            // تمرير تلقائي للأسفل عند وجود رسائل جديدة
+            // تمرير تلقائي للأسفل
             useEffect(() => { 
                 if (chatRef.current) {
                     chatRef.current.scrollTop = chatRef.current.scrollHeight;
@@ -301,4 +298,3 @@
     </script>
 </body>
 </html>
-```
